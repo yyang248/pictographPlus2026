@@ -1,6 +1,7 @@
 #' run MCMC for all mutations by sample presence
 #' @export
-runMCMCForAllBoxes <- function(sep_list, max_K = 5, min_mutation_per_cluster = 1, n.iter = 5000, n.burn = 1000, thin = 10,
+runMCMCForAllBoxes <- function(sep_list, max_K = 5, min_mutation_per_cluster = 2, cluster_diff_thresh=0.05,
+                               n.iter = 5000, n.burn = 1000, thin = 10,
                                mc.cores = 4, model_type = "spike_and_slab", beta.prior = FALSE, drop_zero = TRUE,
                                inits = list(".RNG.name" = "base::Wichmann-Hill",
                                             ".RNG.seed" = 123)){
@@ -27,7 +28,7 @@ runMCMCForAllBoxes <- function(sep_list, max_K = 5, min_mutation_per_cluster = 1
     # i = 2
     temp_box <- sep_list[[i]]
     # Max number of clusters cannot be more than number of mutations/min_mutation_per_cluster
-    temp_max_K <- min(max_K, length(temp_box$mutation_indices)/min_mutation_per_cluster)
+    temp_max_K <- min(max_K, floor(length(temp_box$mutation_indices)/min_mutation_per_cluster))
     temp_samps_list <- runMutSetMCMC(temp_box, 
                                      n.iter = n.iter, n.burn = n.burn, thin = thin, 
                                      mc.cores = mc.cores,
@@ -36,7 +37,9 @@ runMCMCForAllBoxes <- function(sep_list, max_K = 5, min_mutation_per_cluster = 1
                                      model_type = model_type,
                                      params = params,
                                      beta.prior = beta.prior,
-                                     drop_zero = drop_zero)
+                                     drop_zero = drop_zero,
+                                     min_mutation_per_cluster = min_mutation_per_cluster, 
+                                     cluster_diff_thresh = cluster_diff_thresh)
     
     all_set_results[[i]] <- temp_samps_list
     # break
@@ -302,7 +305,9 @@ runMutSetMCMC <- function(temp_box,
                           model_type = "spike_and_slab",
                           params = c("z", "w", "ystar"),
                           beta.prior = FALSE,
-                          drop_zero = FALSE) {
+                          drop_zero = FALSE,
+                          min_mutation_per_cluster = 1,
+                          cluster_diff_thresh=0.05) {
   #beta.prior not used
   # warning("beta prior not used or updated in runMCMC")
   # Run MCMC
@@ -332,9 +337,8 @@ runMutSetMCMC <- function(temp_box,
   }
   
   # check whether 1) number of mutations per cluster is at least min_mutation_per_cluster 2) difference between any two cluster less than cluster_diff_thresh 
-  min_mutation_per_cluster = 1
-  cluster_diff_thresh=0.05
-  filtered_samps_list <- filterK(samps_list)
+  filtered_samps_list <- filterK(samps_list, min_mutation_per_cluster = min_mutation_per_cluster,
+                                 cluster_diff_thresh = cluster_diff_thresh)
   
   # Calculate BIC
   K_tested <- seq_len(length(filtered_samps_list))
@@ -380,6 +384,12 @@ filterK <- function(samps_list, min_mutation_per_cluster=1, cluster_diff_thresh=
         break
       }
       mcfTable = writeClusterCCFsTable(w_chain)
+      # check whether mcf for any cluster is less than cluster_diff_thresh in all samples
+      for (j1 in seq_len(k)) {
+        if (all(mcfTable[j1,] < cluster_diff_thresh)) {
+          toBreak = T
+        }
+      }
       # check whether mcf difference between any two clusters less than cluster_diff_thresh in all samples
       for (j1 in seq_len(k-1)) {
         for (j2 in seq(j1+1, k)) {
