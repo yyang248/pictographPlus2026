@@ -38,7 +38,7 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' @param subclone_props matrix of subclone proportions (returned from \code{calcSubcloneProportions})
 #' @param sample_names (Optional) Vector of sample names. Should be in the order of columns of subclone_props
 #' @export
-plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_names = NULL) {
+plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_names = NULL, title_size=16, legend_size=10) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
   props_tb <- subclone_props %>%
     magrittr::set_colnames(sample_names) %>%
@@ -56,9 +56,9 @@ plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_nam
     scale_fill_manual(values = clone_colors, drop = F) +
     theme_void() +
     theme(legend.position = "bottom") +
-    theme(legend.text = element_text(size=12), legend.title = element_text(size=12)) + 
+    theme(legend.text = element_text(size=legend_size), legend.title = element_text(size=legend_size)) + 
     facet_wrap(~Sample) +
-    theme(strip.text.x = element_text(size=16))
+    theme(strip.text.x = element_text(size=title_size))
   
 }
 
