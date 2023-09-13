@@ -1,14 +1,17 @@
 #' read input data file and store in PICTOGRAPH input format
 #' @export
 #' @param mutation_file mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";
-#' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "major", "minor"
+#' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "tcn"
 importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0) {
+  
+  # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
   mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
+  
   copy_number_data = importCopyNumberFile(copy_number_file)
-  warning("CNA not checked for overlap yet; user need to make sure CNA seperate")
-  mutation_data$major = copy_number_data$major
-  mutation_data$minor = copy_number_data$minor
-  mutation_data$tcn = mutation_data$major + mutation_data$minor
+  warning("importFiles: CNA not checked for overlap yet; user need to make sure CNA seperate")
+  mutation_data$tcn = copy_number_data$tcn
+  # mutation_data$minor = copy_number_data$minor
+  # mutation_data$tcn = mutation_data$major + mutation_data$minor
   mutation_data$overlap = resolveOverlap(mutation_data)
 
   return(mutation_data)
@@ -17,12 +20,12 @@ importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh =
 #' check whether a mutation overlaps a CNA region
 resolveOverlap <- function(mutation_data) {
   mut_count = nrow(mutation_data$position)
-  cna_count = nrow(mutation_data$major)
+  cna_count = nrow(mutation_data$tcn)
   output = matrix(0, nrow=mut_count, ncol=cna_count)
   rownames(output) = mutation_data$position$mutation
-  colnames(output) = rownames(mutation_data$major)
+  colnames(output) = rownames(mutation_data$tcn)
   # print(output)
-  cnas = rownames(mutation_data$major)
+  cnas = rownames(mutation_data$tcn)
   mutations = mutation_data$position
   for (i in seq_len(mut_count)) {
     for (j in seq_len(cna_count)) {
@@ -46,23 +49,23 @@ importCopyNumberFile <- function(copy_number_file) {
   data <- read_csv(copy_number_file, show_col_types = FALSE)
   data$CNA = paste(data$chrom, data$start, data$end, sep = '-')
   output_data <- list()
-  output_data$major = as.matrix(data[c("sample", "CNA", "major")] %>% pivot_wider(names_from = sample, values_from = major, values_fill = 1))
-  rownames(output_data$major) <- output_data$major[,'CNA']
-  output_data$major <- output_data$major[,-1, drop=FALSE]
-  rowname = rownames(output_data$major)
-  colname = colnames(output_data$major)
-  output_data$major <- matrix(as.numeric(output_data$major), ncol = ncol(output_data$major))
-  rownames(output_data$major) = rowname
-  colnames(output_data$major) = colname
+  output_data$tcn = as.matrix(data[c("sample", "CNA", "tcn")] %>% pivot_wider(names_from = sample, values_from = tcn, values_fill = 2))
+  rownames(output_data$tcn) <- output_data$tcn[,'CNA']
+  output_data$tcn <- output_data$tcn[,-1, drop=FALSE]
+  rowname = rownames(output_data$tcn)
+  colname = colnames(output_data$tcn)
+  output_data$tcn <- matrix(as.numeric(output_data$tcn), ncol = ncol(output_data$tcn))
+  rownames(output_data$tcn) = rowname
+  colnames(output_data$tcn) = colname
 
-  output_data$minor = as.matrix(data[c("sample", "CNA", "minor")] %>% pivot_wider(names_from = sample, values_from = minor, values_fill = 1))
-  rownames(output_data$minor) <- output_data$minor[,'CNA']
-  output_data$minor <- output_data$minor[,-1, drop=FALSE]
-  rowname = rownames(output_data$minor)
-  colname = colnames(output_data$minor)
-  output_data$minor <- matrix(as.numeric(output_data$minor), ncol = ncol(output_data$minor))
-  rownames(output_data$minor) = rowname
-  colnames(output_data$minor) = colname
+  # output_data$minor = as.matrix(data[c("sample", "CNA", "minor")] %>% pivot_wider(names_from = sample, values_from = minor, values_fill = 1))
+  # rownames(output_data$minor) <- output_data$minor[,'CNA']
+  # output_data$minor <- output_data$minor[,-1, drop=FALSE]
+  # rowname = rownames(output_data$minor)
+  # colname = colnames(output_data$minor)
+  # output_data$minor <- matrix(as.numeric(output_data$minor), ncol = ncol(output_data$minor))
+  # rownames(output_data$minor) = rowname
+  # colnames(output_data$minor) = colname
 
   return(output_data)
 }
@@ -70,6 +73,7 @@ importCopyNumberFile <- function(copy_number_file) {
 #' import mutation file
 importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0) {
   data <- read_csv(mutation_file, show_col_types = FALSE)
+  data <- data %>% filter(alt_reads/total_reads>=vaf_thresh, alt_reads>=alt_reads_thresh)
   output_data <- list()
 
   output_data$y <- as.matrix(data[c("mutation", "sample", "alt_reads")] %>% pivot_wider(names_from = sample, values_from = alt_reads, values_fill = 0))
@@ -98,15 +102,15 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
   }
 
   if (any(output_data$n==0)) {
-    warning("Total read counts of 0 encoutered. Replaced 0 with mean total read count.")
+    print("Total read counts of 0 encoutered. Replaced 0 with mean total read count.")
     output_data$n[output_data$n==0] <- round(mean(output_data$n))
   }
 
   output_data$S = ncol(output_data$y)
   output_data$I = nrow(output_data$y)
 
-  output_data$y[output_data$y / output_data$n < vaf_thresh] = 0
-  output_data$y[output_data$y < alt_reads_thresh] = 0
+  # output_data$y[output_data$y / output_data$n < vaf_thresh] = 0
+  # output_data$y[output_data$y < alt_reads_thresh] = 0
 
   mutation_position = unique(data[c("mutation", "chrom", "start", "end")])
   if (!all(sort(unique(data[c("mutation", "chrom", "start", "end")]) %>% pull(mutation)) == sort(output_data$MutID))) {
