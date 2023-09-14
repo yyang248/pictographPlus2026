@@ -2,17 +2,18 @@
 #' @export
 #' @param mutation_file mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";
 #' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "tcn"
-importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0) {
+importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.10, tcn_normal_range=c(1.8, 2.2), smooth_cnv=T, autosome=T) {
   
   # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
   mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
   
-  copy_number_data = importCopyNumberFile(copy_number_file)
+  copy_number_data = importCopyNumberFile(copy_number_file, cnv_max_dist, cnv_max_percent, tcn_normal_range, smooth_cnv, autosome)
   warning("importFiles: CNA not checked for overlap yet; user need to make sure CNA seperate")
   mutation_data$tcn = copy_number_data$tcn
   # mutation_data$minor = copy_number_data$minor
   # mutation_data$tcn = mutation_data$major + mutation_data$minor
   mutation_data$overlap = resolveOverlap(mutation_data)
+  warning("resolveOverlap: need to check whether a mutation overlaps with two CNA segs")
 
   return(mutation_data)
 }
@@ -44,18 +45,67 @@ resolveOverlap <- function(mutation_data) {
   return(output)
 }
 
+#' merge segments with similar coordinates
+#' the maximum allowed distance between the start or end position of two segments is the max(cnv_max_dist, min(length of two segments)*cnv_max_percent)
+smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.10) {
+  # smooth_data <- as_tibble(data.frame(matrix(nrow=0, ncol=ncol(data))))
+  # colnames(smooth_data) <- colnames(data)
+  
+  # samples <- unique(data$sample)
+  data <- data %>% arrange(chrom, start)
+  indexList = seq_len(nrow(data))
+  
+  for (i in seq_len(nrow(data))) {
+    if (i %in% indexList) {
+      # print(data[i,])
+      max_dis = max(cnv_max_dist, cnv_max_percent*(data[i,]$end-data[i,]$start))
+      index_selected = which((data$chrom==data[i,]$chrom)&(abs(data$start-data[i,]$start)<max_dis)&(abs(data$end-data[i,]$end)<max_dis))
+      
+      # list of cnv segments able to merge
+      cnv_selected = data[index_selected,]
+      # start = min(cnv_selected$start)
+      # end = max(cnv_selected$end)
+      data[index_selected,]$start = min(cnv_selected$start)
+      data[index_selected,]$end = max(cnv_selected$end)
+      indexList <- indexList[!(indexList %in% index_selected)]
+    }
+  }
+  warning("Add split CNV function in smoothCNV under preprocessing.R")
+  return(data)
+}
+
 #' import copy number file
-importCopyNumberFile <- function(copy_number_file) {
+#' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
+#' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
+#' @param smooth_cnv: process input CNV to merge  segments with similar distance
+importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_percent=0.10, tcn_normal_range=c(1.8, 2.2), smooth_cnv=T, autosome=T) {
   data <- read_csv(copy_number_file, show_col_types = FALSE)
+  data <- data %>% arrange(chrom, start)
+  # SMOOTH SEGMENTS
+  if (smooth_cnv) {
+    data <- smoothCNV(data, cnv_max_dist, cnv_max_percent)
+  }
+  
   data$CNA = paste(data$chrom, data$start, data$end, sep = '-')
+  
+  # keep only autosome
+  if (autosome) {
+    data <- data[!(data$chrom %in% c('chrX', 'chrY', 'chrM')),]
+  }
+  
   output_data <- list()
   output_data$tcn = as.matrix(data[c("sample", "CNA", "tcn")] %>% pivot_wider(names_from = sample, values_from = tcn, values_fill = 2))
+  
+  
+  warning("FILL MISSING TCN WITH 2; NEED TO FIX FOR CHRX/Y FOR VALUES_FILL in importCopyNumberFile in preprocessing.R")
   rownames(output_data$tcn) <- output_data$tcn[,'CNA']
   output_data$tcn <- output_data$tcn[,-1, drop=FALSE]
   rowname = rownames(output_data$tcn)
   colname = colnames(output_data$tcn)
   output_data$tcn <- matrix(as.numeric(output_data$tcn), ncol = ncol(output_data$tcn))
-  rownames(output_data$tcn) = rowname
+  to_keep_index = which(rowSums(output_data$tcn<tcn_normal_range[1]|output_data$tcn>tcn_normal_range[2])>0)
+  output_data$tcn = output_data$tcn[to_keep_index,]
+  rownames(output_data$tcn) = rowname[to_keep_index]
   colnames(output_data$tcn) = colname
 
   # output_data$minor = as.matrix(data[c("sample", "CNA", "minor")] %>% pivot_wider(names_from = sample, values_from = minor, values_fill = 1))
