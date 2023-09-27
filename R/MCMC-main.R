@@ -6,7 +6,17 @@
 #' min_mutation_per_box: minimum number of mutaitons for each box by sample presence
 mcmcMain <- function(max_K = 5, min_mutation_per_cluster=1, iterations=5, min_mutation_per_box=2) {
   # read in files
-  data <- importFiles('./inst/extdata/sim_v2_snv.csv', './inst/extdata/sim_v2_cn.csv', alt_reads_thresh = 0, vaf_thresh = 0)
+  max_K = 3
+  min_mutation_per_cluster=5
+  iterations=5
+  min_mutation_per_box=10
+  min_mutation_per_cluster = 1 
+  n.iter = 5000
+  n.burn = 1000
+  thin = 10
+  mc.cores = 8
+  
+  data <- importFiles('./inst/extdata/sim_v2_snv.csv', './inst/extdata/sim_v2_cn.csv', alt_reads_thresh = 0, vaf_thresh = 0, smooth_cnv = F)
   
   for (iteration in seq_len(iterations)) {
     if (iteration == 1) {
@@ -42,8 +52,8 @@ mcmcMain <- function(max_K = 5, min_mutation_per_cluster=1, iterations=5, min_mu
     sep_list <- separateMutationsBySamplePresence(input_data, min_mutation_per_box)
     
     # 2. For each presence set, run clustering MCMC, calc BIC and choose best K (min BIC)
-    all_set_results <- runMCMCForAllBoxes(sep_list, max_K = 5, min_mutation_per_cluster = 1, 
-                                          n.iter = 5000, n.burn = 1000, thin = 10, mc.cores = 4)
+    all_set_results <- runMCMCForAllBoxes(sep_list, max_K = 3, min_mutation_per_cluster = 1, 
+                                          n.iter = 5000, n.burn = 1000, thin = 10, mc.cores = 8)
     
     # 3. pick K: most common or min_BIC
     set_k_choices <- writeSetKTable(all_set_results)
@@ -108,9 +118,9 @@ mcmcMain <- function(max_K = 5, min_mutation_per_cluster=1, iterations=5, min_mu
   # writeClusterCCFsTable(chains$w_chain)
   # writeClusterAssignmentsTable(chains$z_chain, Mut_ID = data$MutID, cncf=cncf_update)
   
-  generateAllTrees(chains$w_chain, lineage_precedence_thresh = 0.1, sum_filter_thresh = 0.2)
+  generateAllTrees(chains$w_chain, lineage_precedence_thresh = 0.02, sum_filter_thresh = 0.1)
   writeClusterCCFsTable(chains$w_chain)
-  writeClusterAssignmentsTable(chains$z_chain, w_chain=chains$w_chain, Mut_ID = data$MutID, cncf=cncf_update)
+  clusterAssingmentTable = writeClusterAssignmentsTable(chains$z_chain, w_chain=chains$w_chain, Mut_ID = data$MutID, cncf=cncf_update)
   scores <- calcTreeScores(chains$w_chain, all_spanning_trees)
   # scores
   # # highest scoring tree
