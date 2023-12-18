@@ -80,7 +80,8 @@ estimateClusterAssignments <- function(z_chain) {
     ungroup()
   map_z <- mcmc_z %>%
     group_by(Parameter) %>%
-    summarize(value=value[probability==max(probability)])
+    summarize(value=value[probability==max(probability)]) %>%
+    ungroup()
   
   # choose first cluster if equal probability
   map_z_count <- map_z %>% 
@@ -111,12 +112,11 @@ writeClusterAssignmentsTable <- function(z_chain, w_chain=NULL, cncf=NULL, Mut_I
     Mut_ID <- paste0("Mut", 1:nrow(map_z))
   }
   map_z <- map_z %>%
-    mutate(Mut_ID = Mut_ID, Cluster = value) %>%
-    select(Mut_ID, Cluster) %>%
+    mutate(Parameter_n = as.numeric(gsub("z\\[(\\d+)\\]","\\1",Parameter)))%>%
+    arrange(Parameter_n)%>%
+    mutate(Mut_ID = Mut_ID, Cluster = value)%>%
+    select(Mut_ID, Cluster)%>%
     arrange(Cluster)
-  # map_z <- map_z %>% mutate(index=str_extract(`Parameter`, '\\d+')) %>%mutate_at(c('index'), as.numeric)
-  # map_z <- map_z %>% add_column(Mut_ID=Mut_ID[map_z$index])
-  # map_z <- map_z %>% mutate(Cluster=value) %>% select(Mut_ID, Cluster) %>% arrange(Cluster)
   
   if (!is.null(cncf)) {
     if (is.null(w_chain)) {
