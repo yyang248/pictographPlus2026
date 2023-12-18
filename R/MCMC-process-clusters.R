@@ -114,6 +114,9 @@ writeClusterAssignmentsTable <- function(z_chain, w_chain=NULL, cncf=NULL, Mut_I
     mutate(Mut_ID = Mut_ID, Cluster = value) %>%
     select(Mut_ID, Cluster) %>%
     arrange(Cluster)
+  # map_z <- map_z %>% mutate(index=str_extract(`Parameter`, '\\d+')) %>%mutate_at(c('index'), as.numeric)
+  # map_z <- map_z %>% add_column(Mut_ID=Mut_ID[map_z$index])
+  # map_z <- map_z %>% mutate(Cluster=value) %>% select(Mut_ID, Cluster) %>% arrange(Cluster)
   
   if (!is.null(cncf)) {
     if (is.null(w_chain)) {
