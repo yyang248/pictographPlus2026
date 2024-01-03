@@ -10,8 +10,14 @@ importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh =
   copy_number_data = importCopyNumberFile(copy_number_file, cnv_max_dist, cnv_max_percent, tcn_normal_range, smooth_cnv, autosome)
   warning("importFiles: CNA not checked for overlap yet; user need to make sure CNA seperate")
   mutation_data$tcn = copy_number_data$tcn
-  # mutation_data$minor = copy_number_data$minor
-  # mutation_data$tcn = mutation_data$major + mutation_data$minor
+  
+  copy_number_info = importCopyNumberInfo(copy_number_file)
+  print(copy_number_info)
+
+  mutation_data$cytoband = copy_number_info$cytoband
+  mutation_data$drivers = copy_number_info$drivers
+  mutation_data$genes = copy_number_info$genes
+  
   mutation_data$overlap = resolveOverlap(mutation_data)
   warning("resolveOverlap: need to check whether a mutation overlaps with two CNA segs")
 
@@ -78,7 +84,7 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.10) {
 #' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
 #' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
 #' @param smooth_cnv: process input CNV to merge  segments with similar distance
-importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_percent=0.10, tcn_normal_range=c(1.8, 2.2), smooth_cnv=T, autosome=T) {
+importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_percent=0.10, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
   data <- read_csv(copy_number_file, show_col_types = FALSE)
   # data <- data %>% arrange(chrom, start)
   # SMOOTH SEGMENTS
@@ -107,17 +113,25 @@ importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_pe
   output_data$tcn = output_data$tcn[to_keep_index,]
   rownames(output_data$tcn) = rowname[to_keep_index]
   colnames(output_data$tcn) = colname
-
-  # output_data$minor = as.matrix(data[c("sample", "CNA", "minor")] %>% pivot_wider(names_from = sample, values_from = minor, values_fill = 1))
-  # rownames(output_data$minor) <- output_data$minor[,'CNA']
-  # output_data$minor <- output_data$minor[,-1, drop=FALSE]
-  # rowname = rownames(output_data$minor)
-  # colname = colnames(output_data$minor)
-  # output_data$minor <- matrix(as.numeric(output_data$minor), ncol = ncol(output_data$minor))
-  # rownames(output_data$minor) = rowname
-  # colnames(output_data$minor) = colname
-
+  
   return(output_data)
+}
+
+#' get copy number cytoband and genes information
+importCopyNumberInfo <- function(copy_number_file) {
+  drivers = c()
+  genes = c()
+  cytoband = c()
+  
+  data <- read_csv(copy_number_file, show_col_types = FALSE)
+  data$CNA = paste(data$chrom, data$start, data$end, sep = '-')
+  
+  for (i in 1:nrow(data)) {
+    cytoband[data[i,]$CNA] <- data[i,]$cytoband
+    genes[data[i,]$CNA] <- data[i,]$genes
+    drivers[data[i,]$CNA] <- data[i,]$drivers
+  }
+  return(list(cytoband=cytoband, drivers=drivers, genes=genes))
 }
 
 #' import mutation file
@@ -158,9 +172,6 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
 
   output_data$S = ncol(output_data$y)
   output_data$I = nrow(output_data$y)
-
-  # output_data$y[output_data$y / output_data$n < vaf_thresh] = 0
-  # output_data$y[output_data$y < alt_reads_thresh] = 0
 
   mutation_position = unique(data[c("mutation", "chrom", "start", "end")])
   if (!all(sort(unique(data[c("mutation", "chrom", "start", "end")]) %>% pull(mutation)) == sort(output_data$MutID))) {
