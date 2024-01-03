@@ -4,13 +4,22 @@
 #' min_mutation_per_cluster: minimum number of mutations per cluster
 #' iterations: number of iterations to run MCMC
 #' min_mutation_per_box: minimum number of mutaitons for each box by sample presence
-mcmcMain <- function(max_K = 5, min_mutation_per_cluster=1, iterations=5, min_mutation_per_box=2) {
+mcmcMain <- function(max_K = 3, 
+                     min_mutation_per_cluster=1, 
+                     iterations=5, 
+                     min_mutation_per_box=10, 
+                     n.iter=5000, 
+                     n.burn=1000, 
+                     thin=10, 
+                     mc.cores=8, model_type="spike_and_slab", 
+                     beta.prior=FALSE, drop_zero=TRUE, 
+                     inits=list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123),
+                     cluster_diff_thresh=0.05) {
   # read in files
   max_K = 3
-  min_mutation_per_cluster=5
+  min_mutation_per_cluster = 1
   iterations=5
   min_mutation_per_box=10
-  min_mutation_per_cluster = 1 
   n.iter = 5000
   n.burn = 1000
   thin = 10
@@ -22,7 +31,8 @@ mcmcMain <- function(max_K = 5, min_mutation_per_cluster=1, iterations=5, min_mu
                ".RNG.seed" = 123)
   cluster_diff_thresh=0.05
   
-  data <- importFiles('./inst/extdata/sim_v2_snv.csv', './inst/extdata/sim_v2_cn.csv', alt_reads_thresh = 0, vaf_thresh = 0, smooth_cnv = F)
+  # data <- importFiles('./inst/extdata/sim_v2_snv.csv', './inst/extdata/sim_v2_cn.csv', alt_reads_thresh = 0, vaf_thresh = 0, smooth_cnv = F)
+  data <- importFiles('~/JHU/projects/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_snv.csv', '~/JHU/projects/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_cn.csv')
   
   for (iteration in seq_len(iterations)) {
     if (iteration == 1) {
