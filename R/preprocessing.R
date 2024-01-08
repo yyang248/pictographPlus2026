@@ -12,7 +12,6 @@ importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh =
   mutation_data$tcn = copy_number_data$tcn
   
   copy_number_info = importCopyNumberInfo(copy_number_file)
-  print(copy_number_info)
 
   mutation_data$cytoband = copy_number_info$cytoband
   mutation_data$drivers = copy_number_info$drivers
@@ -110,7 +109,7 @@ importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_pe
   colname = colnames(output_data$tcn)
   output_data$tcn <- matrix(as.numeric(output_data$tcn), ncol = ncol(output_data$tcn))
   to_keep_index = which(rowSums(output_data$tcn<tcn_normal_range[1]|output_data$tcn>tcn_normal_range[2])>0)
-  output_data$tcn = output_data$tcn[to_keep_index,]
+  output_data$tcn = output_data$tcn[to_keep_index,,drop=FALSE]
   rownames(output_data$tcn) = rowname[to_keep_index]
   colnames(output_data$tcn) = colname
   
