@@ -2,7 +2,7 @@
 #' @export
 #' @param mutation_file mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";
 #' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "tcn"
-importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.10, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+importFiles <- function(mutation_file, copy_number_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
   
   # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
   mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
@@ -52,11 +52,13 @@ resolveOverlap <- function(mutation_data) {
 
 #' merge segments with similar coordinates
 #' the maximum allowed distance between the start or end position of two segments is the max(cnv_max_dist, min(length of two segments)*cnv_max_percent)
-smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.10) {
+smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
   # smooth_data <- as_tibble(data.frame(matrix(nrow=0, ncol=ncol(data))))
   # colnames(smooth_data) <- colnames(data)
   
   # samples <- unique(data$sample)
+  
+  warning("improvements needed for smoothCNV under preprocessing.R")
   data <- data %>% arrange(chrom, start)
   indexList = seq_len(nrow(data))
   
@@ -65,17 +67,21 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.10) {
       # print(data[i,])
       max_dis = max(cnv_max_dist, cnv_max_percent*(data[i,]$end-data[i,]$start))
       index_selected = which((data$chrom==data[i,]$chrom)&(abs(data$start-data[i,]$start)<max_dis)&(abs(data$end-data[i,]$end)<max_dis))
+      if (length(index_selected) > 1) {
+        # list of cnv segments able to merge
+        cnv_selected = data[index_selected,]
+        # start = min(cnv_selected$start)
+        # end = max(cnv_selected$end)
+        data[index_selected,]$start = min(cnv_selected$start)
+        data[index_selected,]$end = max(cnv_selected$end)
+        data[index_selected,]$drivers = paste(unique(unlist(strsplit(cnv_selected$drivers, ";"))), collapse=";")
+        data[index_selected,]$genes = paste(unique(unlist(strsplit(cnv_selected$genes, ";"))), collapse=";")
+      }
       
-      # list of cnv segments able to merge
-      cnv_selected = data[index_selected,]
-      # start = min(cnv_selected$start)
-      # end = max(cnv_selected$end)
-      data[index_selected,]$start = min(cnv_selected$start)
-      data[index_selected,]$end = max(cnv_selected$end)
       indexList <- indexList[!(indexList %in% index_selected)]
     }
   }
-  warning("Add split CNV function in smoothCNV under preprocessing.R")
+  
   return(data)
 }
 
@@ -83,7 +89,7 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.10) {
 #' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
 #' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
 #' @param smooth_cnv: process input CNV to merge  segments with similar distance
-importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_percent=0.10, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
   data <- read_csv(copy_number_file, show_col_types = FALSE)
   # data <- data %>% arrange(chrom, start)
   # SMOOTH SEGMENTS
