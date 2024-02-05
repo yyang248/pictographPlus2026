@@ -5,7 +5,7 @@
 importFiles <- function(mutation_file, copy_number_file, germline_SNP_file, tumor_SNP_file, cytoband_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
   
   # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
-  mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh) aaa
+  mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
   
   copy_number_data = importCopyNumberFile(copy_number_file, cnv_max_dist, cnv_max_percent, tcn_normal_range, smooth_cnv, autosome)
 
