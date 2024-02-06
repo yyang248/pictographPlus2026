@@ -47,9 +47,11 @@ mcmcMain <- function(max_K = 3,
   autosome=T
   copy_number_file = '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_cn.csv'
   mutation_file = '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_snv.csv'
+  germline_SNP_file = '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/pileup/'
+  
   outputDir='~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/'
   # data <- importFiles('./inst/extdata/sim_v2_snv.csv', './inst/extdata/sim_v2_cn.csv', alt_reads_thresh = 0, vaf_thresh = 0, smooth_cnv = F)
-  data <- importFiles('~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_snv.csv', '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_cn.csv', smooth_cnv=T)
+  data <- importFiles('~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_snv.csv', '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_cn.csv', smooth_cnv=smooth_cnv)
   
   for (iteration in seq_len(iterations)) {
     if (iteration == 1) {
