@@ -2,16 +2,16 @@
 #' @export
 #' @param mutation_file mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";
 #' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "tcn"
-importFiles <- function(mutation_file, copy_number_file, germline_SNP_file, tumor_SNP_file, cytoband_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+importFiles <- function(mutation_file, copy_number_file, SNP_file=NULL, cytoband_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
   
   # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
   mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
   
-  copy_number_data = importCopyNumberFile(copy_number_file, cnv_max_dist, cnv_max_percent, tcn_normal_range, smooth_cnv, autosome)
+  copy_number_data = importCopyNumberFile(copy_number_file, germline_SNP_file, tumor_SNP_file, cnv_max_dist, cnv_max_percent, tcn_normal_range, smooth_cnv, autosome)
 
   mutation_data$tcn = copy_number_data$tcn
   
-  copy_number_info = importCopyNumberInfo(copy_number_file)
+  # copy_number_info = importCopyNumberInfo(copy_number_file)
 
   # mutation_data$cytoband = copy_number_info$cytoband
   # mutation_data$drivers = copy_number_info$drivers
@@ -94,10 +94,12 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
 #' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
 #' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
 #' @param smooth_cnv: process input CNV to merge  segments with similar distance
-importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+importCopyNumberFile <- function(copy_number_file, SNP_file=NULL, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+  # read copy number csv file
   data <- read_csv(copy_number_file, show_col_types = FALSE)
-  # data <- data %>% arrange(chrom, start)
-  # SMOOTH SEGMENTS
+
+  # Smooth segments so segments with different start/end position are treated the same, 
+  # conditioned on overlapping and distance between positions
   if (smooth_cnv) {
     data <- smoothCNV(data, cnv_max_dist, cnv_max_percent)
   }
@@ -109,22 +111,48 @@ importCopyNumberFile <- function(copy_number_file, cnv_max_dist=2000, cnv_max_pe
     data <- data[!(data$chrom %in% c('chrX', 'chrY', 'chrM')),]
   }
   
+  # convert to cna by sample matrix 
   output_data <- list()
-  output_data$tcn = as.matrix(data[c("sample", "CNA", "tcn")] %>% pivot_wider(names_from = sample, values_from = tcn, values_fill = 2))
+  output_data = as.matrix(data[c("sample", "CNA", "tcn")] %>% pivot_wider(names_from = sample, values_from = tcn, values_fill = 2))
   
+  # fill missing CNA with 2
+  message("FILL MISSING TCN WITH 2; NEED TO FIX FOR CHRX/Y FOR VALUES_FILL in importCopyNumberFile in preprocessing.R")
+  rownames(output_data) <- output_data[,'CNA']
+  output_data <- output_data[,-1, drop=FALSE]
+  rowname = rownames(output_data)
+  colname = colnames(output_data)
+  output_data <- matrix(as.numeric(output_data), ncol = ncol(output_data))
+  rownames(output_data) = rowname
+  colnames(output_data) = colname
   
-  warning("FILL MISSING TCN WITH 2; NEED TO FIX FOR CHRX/Y FOR VALUES_FILL in importCopyNumberFile in preprocessing.R")
-  rownames(output_data$tcn) <- output_data$tcn[,'CNA']
-  output_data$tcn <- output_data$tcn[,-1, drop=FALSE]
-  rowname = rownames(output_data$tcn)
-  colname = colnames(output_data$tcn)
-  output_data$tcn <- matrix(as.numeric(output_data$tcn), ncol = ncol(output_data$tcn))
-  to_keep_index = which(rowSums(output_data$tcn<tcn_normal_range[1]|output_data$tcn>tcn_normal_range[2])>0)
-  output_data$tcn = output_data$tcn[to_keep_index,,drop=FALSE]
-  rownames(output_data$tcn) = rowname[to_keep_index]
-  colnames(output_data$tcn) = colname
+  # check lOH using HET SNPs; 
+  # if both germline and tumor SNP counts provided, will check LOH
+  # otherwise, keep CNA outside normal range only
+  if (SNP_file) {
+    to_keep_index = check_LOH(output_data, SNP_file, tcn_normal_range)
+  } else {
+    to_keep_index = which(rowSums(output_data<tcn_normal_range[1]|output_data>tcn_normal_range[2])>0)
+  }
+  
+
+  
+  output_data = output_data[to_keep_index,,drop=FALSE]
+  
   
   return(output_data)
+}
+
+check_LOH <- function(output_data, SNP_file, tcn_normal_range=c(1.8, 2.2)) {
+  to_keep_index = c()
+  tcn_normal_range=c(1.6, 2.5)
+  for (i in 1:nrow(output_data)) {
+    if (any(output_data[i,]<tcn_normal_range[1])|any(output_data[i,]>tcn_normal_range[2])>0) {
+      to_keep_index <- c(to_keep_index, i)
+    } else {
+      print(i)
+      
+      break}
+  }
 }
 
 #' #' get copy number cytoband and genes information
