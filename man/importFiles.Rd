@@ -6,15 +6,23 @@
 \usage{
 importFiles(
   mutation_file,
-  copy_number_file = NULL,
+  copy_number_file,
+  outputDir,
+  SNP_file = NULL,
+  cytoband_file = NULL,
   alt_reads_thresh = 0,
-  vaf_thresh = 0
+  vaf_thresh = 0,
+  cnv_max_dist = 2000,
+  cnv_max_percent = 0.3,
+  tcn_normal_range = c(1.8, 2.2),
+  smooth_cnv = F,
+  autosome = T
 )
 }
 \arguments{
 \item{mutation_file}{mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";}
 
-\item{copy_number_file}{copy number file that contains columns "sample", "chrom", "start", "end", "major", "minor"}
+\item{copy_number_file}{copy number file that contains columns "sample", "chrom", "start", "end", "tcn"}
 }
 \description{
 read input data file and store in PICTOGRAPH input format

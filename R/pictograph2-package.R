@@ -1,3 +1,7 @@
+#' pictograph2
+#' 
+#' infer tumor evolution using SNV and CNA
+#' 
 #' @import readr
 #' @import tidyverse
 #' @import dplyr
@@ -12,7 +16,6 @@
 #' @import viridis
 #' @import igraph
 #' @import stringr
-#' @docType package
-#' @name pictograph2
+#' @name pictograph2-package
+#' @aliases pictograph2
 NULL
-#> NULL

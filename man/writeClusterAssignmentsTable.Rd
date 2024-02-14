@@ -4,7 +4,12 @@
 \alias{writeClusterAssignmentsTable}
 \title{Determine most probable mutation cluster assignments by taking those with highest posterior probability.}
 \usage{
-writeClusterAssignmentsTable(z_chain, Mut_ID = NULL)
+writeClusterAssignmentsTable(
+  z_chain,
+  w_chain = NULL,
+  cncf = NULL,
+  Mut_ID = NULL
+)
 }
 \arguments{
 \item{z_chain}{MCMC chain of mutation cluster assignment values, which is the second item in the list returned by \code{clusterSep}}

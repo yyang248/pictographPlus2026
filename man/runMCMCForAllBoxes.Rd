@@ -4,7 +4,20 @@
 \alias{runMCMCForAllBoxes}
 \title{run MCMC for all mutations by sample presence}
 \usage{
-runMCMCForAllBoxes(sep_list)
+runMCMCForAllBoxes(
+  sep_list,
+  max_K = 5,
+  min_mutation_per_cluster = 2,
+  cluster_diff_thresh = 0.05,
+  n.iter = 5000,
+  n.burn = 1000,
+  thin = 10,
+  mc.cores = 4,
+  model_type = "spike_and_slab",
+  beta.prior = FALSE,
+  drop_zero = TRUE,
+  inits = list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = 123)
+)
 }
 \description{
 run MCMC for all mutations by sample presence

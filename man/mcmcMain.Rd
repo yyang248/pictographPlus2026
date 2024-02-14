@@ -4,7 +4,29 @@
 \alias{mcmcMain}
 \title{run MCMC with added subclonal copy number}
 \usage{
-mcmcMain(max_K = 5, min_mutation_per_cluster = 1)
+mcmcMain(
+  max_K = 3,
+  min_mutation_per_cluster = 1,
+  iterations = 5,
+  min_mutation_per_box = 10,
+  n.iter = 5000,
+  n.burn = 1000,
+  thin = 10,
+  mc.cores = 8,
+  model_type = "spike_and_slab",
+  beta.prior = FALSE,
+  drop_zero = TRUE,
+  inits = list(.RNG.name = "base::Wichmann-Hill", .RNG.seed = 123),
+  cluster_diff_thresh = 0.05,
+  alt_reads_thresh = 0,
+  vaf_thresh = 0,
+  cnv_max_dist = 2000,
+  cnv_max_percent = 0.1,
+  tcn_normal_range = c(1.8, 2.2),
+  smooth_cnv = F,
+  autosome = T,
+  outputDir = "./"
+)
 }
 \description{
 run MCMC with added subclonal copy number

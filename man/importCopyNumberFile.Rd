@@ -4,7 +4,23 @@
 \alias{importCopyNumberFile}
 \title{import copy number file}
 \usage{
-importCopyNumberFile(copy_number_file)
+importCopyNumberFile(
+  copy_number_file,
+  outputDir,
+  SNP_file = NULL,
+  cnv_max_dist = 2000,
+  cnv_max_percent = 0.3,
+  tcn_normal_range = c(1.8, 2.2),
+  smooth_cnv = F,
+  autosome = T
+)
+}
+\arguments{
+\item{cnv_max_dist:}{maximum of distance allowed between two segments to assign as the same one}
+
+\item{cnv_max_percent:}{maximum percentage of distance allowed between two segments to assign as the same one}
+
+\item{smooth_cnv:}{process input CNV to merge  segments with similar distance}
 }
 \description{
 import copy number file

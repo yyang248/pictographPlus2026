@@ -1050,7 +1050,7 @@ init.admat <- function(w, zero.thresh) {
   rand.admat(base)
 }
 
-
+#' @export
 mutate.admat <- function(admat, ncol.to.mutate) {
   ## choose a column(s) to mutate
   K <- ncol(admat)
@@ -1083,6 +1083,7 @@ mutate.admat <- function(admat, ncol.to.mutate) {
   new.admat
 }
 
+#' @export
 mutate.admat.2 <- function(admat, ncol.to.mutate) {
   
   new.admat <- mutate.n.columns(admat, ncol.to.mutate)
@@ -1095,6 +1096,7 @@ mutate.admat.2 <- function(admat, ncol.to.mutate) {
   new.admat
 }
 
+#' @export
 mutate.n.columns <- function(admat, ncol.to.mutate) {
   K <- ncol(admat)
   # columns with more than 1 possible position
@@ -1107,6 +1109,7 @@ mutate.n.columns <- function(admat, ncol.to.mutate) {
   admat
 }
 
+#' @export
 mutate.column <- function(admat, k) {
   ## possible positions (0's)
   possiblePos <- which(!is.na(admat[, k]) & admat[, k] != 1)
@@ -1124,6 +1127,7 @@ mutate.column <- function(admat, k) {
   admat
 }
 
+#' @export
 mutate.admat.3 <- function(admat, ncol.to.mutate, mcf_matrix) {
   
   mutate.prob.tb <- get.cluster.mutate.prob(mcf_matrix)
@@ -1138,6 +1142,7 @@ mutate.admat.3 <- function(admat, ncol.to.mutate, mcf_matrix) {
   new.admat
 }
 
+#' @export
 mutate.n.columns.clusterprob <- function(admat, ncol.to.mutate, mutate.prob.tb) {
   K <- ncol(admat)
   rand.ks <- sample(seq_len(K), size=ncol.to.mutate, prob = mutate.prob.tb$cluster_prob)
