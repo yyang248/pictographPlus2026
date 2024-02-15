@@ -1,58 +1,52 @@
 #' run MCMC with added subclonal copy number
+#' 
 #' @export
-#' max_K: max K for each box
-#' min_mutation_per_cluster: minimum number of mutations per cluster
-#' iterations: number of iterations to run MCMC
-#' min_mutation_per_box: minimum number of mutaitons for each box by sample presence
-mcmcMain <- function(max_K = 3, 
-                     min_mutation_per_cluster=1, 
+mcmcMain <- function(mutation_file,
+                     copy_number_file,
+                     outputDir,
+                     SNP_file=NULL,
+                     stat_file=NULL, 
+                     cytoband_file=NULL, 
+                     pval=0.05,
+                     sim_iter=100,
+                     max_K = 3, 
+                     min_mutation_per_cluster=5, 
                      iterations=5, 
                      min_mutation_per_box=10, 
                      n.iter=5000, 
                      n.burn=1000, 
                      thin=10, 
-                     mc.cores=8, model_type="spike_and_slab", 
-                     beta.prior=FALSE, drop_zero=TRUE, 
+                     mc.cores=8, 
+                     model_type="spike_and_slab", 
+                     beta.prior=FALSE, 
+                     drop_zero=TRUE, 
                      inits=list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123),
                      cluster_diff_thresh=0.05,
                      alt_reads_thresh = 0, 
                      vaf_thresh = 0, 
                      cnv_max_dist=2000, 
-                     cnv_max_percent=0.10, 
+                     cnv_max_percent=0.30, 
                      tcn_normal_range=c(1.8, 2.2), 
-                     smooth_cnv=F, 
-                     autosome=T,
-                     outputDir="./") {
-  # read in files
-  max_K = 3
-  min_mutation_per_cluster = 10
-  iterations=5
-  min_mutation_per_box=10
-  n.iter = 5000
-  n.burn = 1000
-  thin = 10
-  mc.cores = 8
-  model_type = "spike_and_slab"
-  beta.prior = FALSE
-  drop_zero = TRUE
-  inits = list(".RNG.name" = "base::Wichmann-Hill",
-               ".RNG.seed" = 123)
-  cluster_diff_thresh=0.05
-  alt_reads_thresh = 0
-  vaf_thresh = 0
-  cnv_max_dist=2000 
-  cnv_max_percent=0.30 
-  tcn_normal_range=c(1.8, 2.2)
-  smooth_cnv=T
-  autosome=T
-  copy_number_file = '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_cn.csv'
-  mutation_file = '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_snv.csv'
-  germline_SNP_file = '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/pileup/'
+                     smooth_cnv=T, 
+                     autosome=T) {
   
-  outputDir='~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/'
-  # data <- importFiles('./inst/extdata/sim_v2_snv.csv', './inst/extdata/sim_v2_cn.csv', alt_reads_thresh = 0, vaf_thresh = 0, smooth_cnv = F)
-  data <- importFiles('~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_snv.csv', '~/Karchin Lab Dropbox/Lai Jillian/htan-mcl-pre-cancer-pancreas/htan-mcl-pre-cancer-pancreas/MCL111_001/MCL111_001_cn.csv', smooth_cnv=smooth_cnv)
-  
+  data <- importFiles(mutation_file, 
+                      copy_number_file, 
+                      outputDir, 
+                      SNP_file=SNP_file, 
+                      stat_file=stat_file, 
+                      cytoband_file=cytoband_file, 
+                      alt_reads_thresh=alt_reads_thresh, 
+                      vaf_thresh=vaf_thresh, 
+                      cnv_max_dist=cnv_max_dist, 
+                      cnv_max_percent=cnv_max_percent, 
+                      tcn_normal_range=tcn_normal_range, 
+                      smooth_cnv=smooth_cnv, 
+                      autosome=autosome, 
+                      mc.cores=mc.cores, 
+                      pval=pval,
+                      sim_iter=sim_iter)
+    
   for (iteration in seq_len(iterations)) {
     if (iteration == 1) {
       # initial integer CNA estimation by setting CNA to closest integer depending on the mean across all samples
