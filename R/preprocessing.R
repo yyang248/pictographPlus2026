@@ -2,15 +2,42 @@
 #' @export
 #' @param mutation_file mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";
 #' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "tcn"
-importFiles <- function(mutation_file, copy_number_file, outputDir, SNP_file=NULL, cytoband_file=NULL, alt_reads_thresh = 0, vaf_thresh = 0, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+importFiles <- function(mutation_file, 
+                        copy_number_file, 
+                        outputDir, 
+                        SNP_file=NULL, 
+                        stat_file=NULL, 
+                        cytoband_file=NULL, 
+                        alt_reads_thresh = 0, 
+                        vaf_thresh = 0, 
+                        cnv_max_dist=2000, 
+                        cnv_max_percent=0.30, 
+                        tcn_normal_range=c(1.8, 2.2), 
+                        smooth_cnv=T, 
+                        autosome=T, 
+                        mc.cores=8, 
+                        pval=0.05,
+                        sim_iter=100) {
   
   # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
   mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
   
-  copy_number_data = importCopyNumberFile(copy_number_file, germline_SNP_file, outputDir, SNP_file, cnv_max_dist, cnv_max_percent, tcn_normal_range, smooth_cnv, autosome)
-
-  mutation_data$tcn = copy_number_data$tcn
+  copy_number_data = importCopyNumberFile(copy_number_file, 
+                                          outputDir, 
+                                          SNP_file, 
+                                          stat_file, 
+                                          cnv_max_dist, 
+                                          cnv_max_percent, 
+                                          tcn_normal_range, 
+                                          smooth_cnv, 
+                                          autosome, 
+                                          pval, 
+                                          mc.cores,
+                                          sim_iter)
   
+  mutation_data$tcn = copy_number_data$tcn
+  mutation_data$tcn_ref = copy_number_data$tcn_ref
+  mutation_data$tcn_alt = copy_number_data$tcn_alt
   # copy_number_info = importCopyNumberInfo(copy_number_file)
 
   # mutation_data$cytoband = copy_number_info$cytoband
@@ -94,10 +121,10 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
 #' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
 #' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
 #' @param smooth_cnv: process input CNV to merge  segments with similar distance
-importCopyNumberFile <- function(copy_number_file, outputDir, SNP_file=NULL, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T) {
+importCopyNumberFile <- function(copy_number_file, outputDir, SNP_file=NULL, stat_file=NULL, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T, pval=0.05, mc.cores=8, sim_iter=100) {
   # read copy number csv file
   data <- read_csv(copy_number_file, show_col_types = FALSE)
-
+  
   # Smooth segments so segments with different start/end position are treated the same, 
   # conditioned on overlapping and distance between positions
   if (smooth_cnv) {
@@ -129,114 +156,223 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNP_file=NULL, cnv
   # if both germline and tumor SNP counts provided, will check LOH
   # otherwise, keep CNA outside normal range only
   if (!is.null(SNP_file)) {
-    to_keep_index = check_LOH(output_data, outputDir, SNP_file, tcn_normal_range)
+    # if there is a CN_stat file already, load
+    if (!is.null(stat_file)) {
+      temp_data <- read_csv(stat_file)
+      samples <- colnames(output_data)
+      to_keep_index <- suppressWarnings(which(as.numeric(temp_data$tumor_pval)<pval & as.numeric(temp_data$germline_pval)>pval))
+    } else {
+      to_keep_index = check_LOH(output_data, outputDir, SNP_file, tcn_normal_range, pval, mc.cores, sim_iter)
+    }
   } else {
-    to_keep_index = which(rowSums(output_data<tcn_normal_range[1]|output_data>tcn_normal_range[2])>0)
+    # to_keep_index = which(rowSums(output_data<tcn_normal_range[1]|output_data>tcn_normal_range[2])>0)
+    errorCondition("Current implementation requires a germline heterozygous SNP file, please provide one; Will be updating w/o SNP file")
+    stop()
   }
   
-
+  tcn_ref <- read_csv(paste(outputDir, "tcf_ref.csv", sep="/"))
+  tcn_ref_matrix <- as.matrix(tcn_ref[,!names(tcn_ref) %in% "chrom", drop = FALSE])
+  rownames(tcn_ref_matrix) <- tcn_ref[["chrom"]]
+  tcn_ref = tcn_ref_matrix[to_keep_index,, drop=FALSE]
+  
+  tcn_alt <- read_csv(paste(outputDir, "tcf_alt.csv", sep="/"))
+  tcn_alt_matrix <- as.matrix(tcn_alt[,!names(tcn_alt) %in% "chrom", drop = FALSE])
+  rownames(tcn_alt_matrix) <- tcn_alt[["chrom"]]
+  tcn_alt = tcn_alt_matrix[to_keep_index,, drop=FALSE]
   
   output_data = output_data[to_keep_index,,drop=FALSE]
   
-  
-  return(output_data)
+  return_data <- list()
+  return_data$tcn <- output_data
+  return_data$tcn_alt <- tcn_alt
+  return_data$tcn_ref <- tcn_ref
+  return(return_data)
 }
 
 #' @import LaplacesDemon
-check_LOH <- function(output_data, outputDir, SNP_file, tcn_normal_range=c(1.8, 2.2), pval=0.05) {
-  print(output_data)
+#' @import parallel
+check_LOH <- function(output_data, outputDir, SNP_file, tcn_normal_range=c(1.8, 2.2), pval=0.05, mc.cores=8, sim_iter=100) {
+  # print(output_data)
   
-  tcn_normal_range=c(1.8, 2.2)
-  pval=0.05
+  # tcn_normal_range=c(1.8, 2.2)
+  # pval=0.05
   SNP_data <- read_csv(SNP_file)
   samples <- colnames(output_data)
   output <- rownames_to_column(as.data.frame(output_data), var="chrom") 
   output <- output %>% separate(col="chrom", into = c("chrom", "start", "end"), sep="-")
   output <- output %>% mutate(start = as.integer(start), end = as.integer(end))
   
-  pdf(paste(outputDir, "test.pdf", sep=""), width = (length(samples)+1)*6, height = (length(samples)+1)*9)
+  pdf(paste(outputDir, "modality.pdf", sep="/"), width = (length(samples)+1)*6, height = (length(samples)+1)*9)
   par(mfrow=c(length(samples)*3,(length(samples)+1)*2), cex.main = 1, cex.axis = 1, cex.lab = 1, cex = 1)
   
-  rowLen =10
+  # rowLen =10
   rowLen = nrow(output_data)
   
+  # output data from this function
   tcn_ref = output_data
   tcn_ref[,] <- 0
   tcn_alt = output_data
   tcn_alt[,] <- 0
   
+  output_stats <- matrix(, nrow=0, ncol=8+length(samples))
+  colnames(output_stats) = c("chrom", "germline_depth", "germline_unimodal_prob", "germline_unimodality", "germline_pval", "tumor_depth", "tumor_unimodal_prob", samples, "tumor_pval")
+  
   to_keep_index = c()
   
-  set.seed(123)
+  # set.seed(123)
   for (i in 1:rowLen) {
     # 326; 11
     # set.seed(123)
 
-    i = 326
+    # i = 326
     # print(output[i,])
     SNP_temp <- SNP_data %>% filter(chroms==output[i,]$chrom & position>=output[i,]$start & position<=output[i,]$end)
-    SNP_temp
-    if (nrow(SNP_temp) > 8) {
+    # SNP_temp
+    if (nrow(SNP_temp) > 2) {
       # for a given segment, if tcn in all samples within tcn_normal_range, assuming copy neutral and test of LOH
-      # using Kolmogorov-Smirnov Test
+      # using unimodal
+      vaf_list <- list()
+      um_list <- list()
+      
+      germline_depth = round(sum(SNP_temp$germline_alt + SNP_temp$germline_ref) / nrow(SNP_temp))
+      # germline_depth
+      # nrow(SNP_temp)
+      
+      # Estimate the probability of multi-modality given num SNPs and depth
+      # start_time <- proc.time()
+      # sim_iter = 100 # number of simulations
+      
+      # sim_unimodal = 0
+      # for (iter in seq_len(sim_iter)) {
+      #   sim_one = simulation_hidden(mcf=0, icn=2, minor_cn=1, depth=germline_depth, num_SNP=nrow(SNP_temp), seed=iter, normal_prop=0)
+      #   if (sim_one) {
+      #     sim_unimodal = sim_unimodal + 1
+      #   }
+      # }
+      # print(sim_unimodal)
+      # um_prob <- sim_unimodal/sim_iter
+      # mm_prob <- 1 - sim_unimodal/sim_iter
+      # mm_prob
+      results <- mclapply(1:sim_iter, function(i) {simulation_hidden(mcf=0, icn=2, minor_cn=1, depth=germline_depth, num_SNP=nrow(SNP_temp), seed=i, normal_prop=0)}, mc.cores=mc.cores)
+      um_prob <- sum(unlist(results)==TRUE) / sim_iter
+      # mm_prob <- 1 - um_prob
+      
+      # end_time <- proc.time()
+      # time_taken <- end_time - start_time
+      # print(time_taken)
+      
       vaf_germline <- SNP_temp$germline_alt / (SNP_temp$germline_alt + SNP_temp$germline_ref)
-      if (is.unimodal(vaf_germline)) {
-        # vaf_germline <- SNP_temp$germline_alt / (SNP_temp$germline_alt + SNP_temp$germline_ref)
-        title = paste(output[i,]$chrom, output[i,]$start, output[i,]$end, sep="_")
-        plot(density(vaf_germline), xlim=c(0,1), main = title)
-        qqnorm(vaf_germline, main = title)
-        qqline(vaf_germline, col="grey")
+      vaf_list[[length(vaf_list) + 1]] <- vaf_germline
+      um_list[[length(um_list) + 1]] <- is.unimodal(vaf_germline)
+      # the probability of seeing (non)unimodal in germline SNP
+      # if (ifelse(is.unimodal(vaf_germline), 1-mm_prob, mm_prob) >= pval) {
+      # } 
+      
+      # vaf_germline <- SNP_temp$germline_alt / (SNP_temp$germline_alt + SNP_temp$germline_ref)
+      # title = paste(output[i,]$chrom, output[i,]$start, output[i,]$end, sep="_")
+      # plot(density(vaf_germline), xlim=c(0,1), main = title)
+      # qqnorm(vaf_germline, main = title)
+      # qqline(vaf_germline, col="grey")
+      
+      # ks_list = c()
+      tumor_depth = round(sum(SNP_temp[, 7:ncol(SNP_temp)])/(nrow(SNP_temp)*length(samples)))
+      results <- mclapply(1:sim_iter, function(i) {simulation_hidden(mcf=0, icn=2, minor_cn=1, depth=tumor_depth, num_SNP=nrow(SNP_temp), seed=i, normal_prop=0)}, mc.cores=mc.cores)
+      um_prob_tumor <- sum(unlist(results)==TRUE) / sim_iter
+      # mm_prob_tumor <- 1 - um_prob_tumor
+      
+      for (j in seq_len(length(samples))) {
+        # j = 1
         
-        ks_list = c()
+        alt = paste(samples[j], "alt", sep="_")
+        ref = paste(samples[j], "ref", sep="_")
         
-        for (j in seq_len(length(samples))) {
-          j = 1
-          alt = paste(samples[j], "alt", sep="_")
-          ref = paste(samples[j], "ref", sep="_")
-          
-          vaf <- SNP_temp[[alt]] / (SNP_temp[[alt]] + SNP_temp[[ref]])
-          # title = paste(output[i,]$chrom, output[i,]$start, output[i,]$end, samples[j], sep="_")
-          title = samples[j]
-          
-          # ks = ks.test(vaf_germline, vaf)
-          ks = is.unimodal(vaf)
-          
-          if (is.unimodal(vaf)) { # if similar to germline distribution, alt and ref will be the sum of all
-            tcn_alt[i,j] = sum(SNP_temp[[alt]])
-            tcn_ref[i,j] = sum(SNP_temp[[ref]])
-            plot(density(vaf), xlim=c(0,1), main = title)
-            qqnorm(vaf, main = title)
-            qqline(vaf, col="green")
-          } else { # else, cluster the vaf into two and take one cluster
-            kmeans_result <- kmeans(vaf, centers = 2)
-            tcn_alt[i,j] = sum(SNP_temp[[alt]][kmeans_result$cluster == 1])
-            tcn_ref[i,j] = sum(SNP_temp[[ref]][kmeans_result$cluster == 1])
-            plot(density(vaf), xlim=c(0,1), main = title)
-            qqnorm(vaf, main = title)
-            qqline(vaf, col="red")
+        # tumor_depth = round(sum(SNP_temp[[alt]] + SNP_temp[[ref]]) / nrow(SNP_temp))
+        
+        vaf <- SNP_temp[[alt]] / (SNP_temp[[alt]] + SNP_temp[[ref]])
+        # title = paste(output[i,]$chrom, output[i,]$start, output[i,]$end, samples[j], sep="_")
+        # title = samples[j]
+        
+        # ks = ks.test(vaf_germline, vaf)
+        # ks = is.unimodal(vaf)
+        vaf_list[[length(vaf_list) + 1]] <- vaf
+        um_list[[length(um_list) + 1]] <- is.unimodal(vaf)
+        
+        if (is.unimodal(vaf)) { # if similar to germline distribution, alt and ref will be the sum of all
+          tcn_alt[i,j] = round(mean(SNP_temp[[alt]]))
+          tcn_ref[i,j] = round(mean(SNP_temp[[ref]]))
+          # plot(density(vaf), xlim=c(0,1), main = title)
+          # qqnorm(vaf, main = title)
+          # qqline(vaf, col="green")
+        } else { # else, cluster the vaf into two and take one cluster
+          kmeans_result <- kmeans(vaf, centers = 2)
+          cluster_number = which.max(kmeans_result$centers)
+          tcn_alt[i,j] = round(mean(SNP_temp[[alt]][kmeans_result$cluster == cluster_number]))
+          tcn_ref[i,j] = round(mean(SNP_temp[[ref]][kmeans_result$cluster == cluster_number]))
+          # plot(density(vaf), xlim=c(0,1), main = title)
+          # qqnorm(vaf, main = title)
+          # qqline(vaf, col="red")
+        }
+        # ks_list <- c(ks_list, ks)
+      }
+      
+      germline_test <- binom.test(x=sum(unlist(um_list)[1]==TRUE), n=1, p=um_prob)
+      # germline_test$p.value # if smaller then pval, disgard the segment (probably gemline CNA event)
+      
+      tumor_test <- binom.test(x=sum(unlist(um_list)[2:length(um_list)]==TRUE), n=length(um_list)-1, p=um_prob_tumor)
+      # tumor_test$p.value # if smaller then pval, keep the CNA (significantCNA event)
+      # print(ks_list)
+      
+      # um_list[[length(um_list) + 1]] <- germline_depth
+      # um_list[[length(um_list) + 1]] <- um_prob
+      # um_list[[length(um_list) + 1]] <- germline_test$p.value
+      # um_list[[length(um_list) + 1]] <- tumor_test$p.value
+      # coln = rownames(output_data)[i]
+      # output_stats <- list(unlist(um_list))
+      output_stats <- rbind(output_stats, matrix(c(rownames(output_data)[i], germline_depth, um_prob,um_list[[1]], germline_test$p.value, tumor_depth, um_prob_tumor, unlist(um_list[2:length(um_list)]), tumor_test$p.value), nrow=1))
+      # check if a segment is within tcn_normal_range for LOH
+      # if (all(output[i,4:ncol(output)] > tcn_normal_range[1] & output[i,4:ncol(output)] < tcn_normal_range[2])) {
+      #   if (all(!ks_list)) {
+      #     to_keep_index <- c(to_keep_index, i)
+      #   } 
+      # } else {
+      #   to_keep_index <- c(to_keep_index, i)
+      # }
+      
+      if (germline_test$p.value > pval & tumor_test$p.value < pval) {
+        to_keep_index <- c(to_keep_index, i)
+        for (idx in seq_len(length(vaf_list))) {
+          vaf <- vaf_list[[idx]]
+          color = "red"
+          if (um_list[[idx]]) {color = "green"}
+          if (idx == 1) {
+            title = paste(output[i,]$chrom, output[i,]$start, output[i,]$end, sep="_")
+          } else {
+            title = samples[idx-1]
           }
-          
-          ks_list <- c(ks_list, ks)
+          # print(title)
+          plot(density(vaf), xlim=c(0,1), main = title)
+          qqnorm(vaf, main = paste("pval: ", ifelse(idx==1, germline_test$p.value, tumor_test$p.value), sep=""))
+          qqline(vaf, col=color)
         }
-        
-        # print(ks_list)
-        
-        if (all(output[i,4:ncol(output)] > tcn_normal_range[1] & output[i,4:ncol(output)] < tcn_normal_range[2])) {
-          if (all(!ks_list)) {
-            to_keep_index <- c(to_keep_index, i)
-          } 
-        } else {
-          to_keep_index <- c(to_keep_index, i)
-        }
-        
       }
     } else {
       # message("what if no SNP in the region; DROP")
+      output_stats <- rbind(output_stats, matrix(c(rownames(output_data)[i], rep("N/A", 7+length(samples))), nrow=1))
     }
   }
   dev.off()
   
-  print(length(to_keep_index))
+  output_stats <- as.data.frame(output_stats)
+  tcn_ref <- as.data.frame(tcn_ref)
+  tcn_ref$chrom <- row.names(tcn_ref)
+  tcn_alt <- as.data.frame(tcn_alt)
+  tcn_alt$chrom <- row.names(tcn_alt)
+  # output_stats
+  # print(length(to_keep_index))
+  write_csv(output_stats, file=paste(outputDir, "CN_stats.csv", sep="/"))
+  write_csv(tcn_ref, file=paste(outputDir, "tcf_ref.csv", sep="/"))
+  write_csv(tcn_alt, file=paste(outputDir, "tcf_alt.csv", sep="/"))
+  return(to_keep_index)
 }
 
 #' #' get copy number cytoband and genes information
@@ -305,7 +441,7 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
   return(output_data)
 }
 
-simulation <- function(mcf=0.9, icn=2, minor_cn=1, depth=30, num_SNP=30, seed=123, normal_prop=1) {
+simulation_hidden <- function(mcf=0.9, icn=2, minor_cn=1, depth=30, num_SNP=30, seed=NULL, normal_prop=1) {
   # mcf=0.8
   # icn=1
   # minor_cn=0
@@ -313,6 +449,7 @@ simulation <- function(mcf=0.9, icn=2, minor_cn=1, depth=30, num_SNP=30, seed=12
   # num_SNP=1500
   # normal_prop=0 # proportion of SNP is actually from CN-neutral region
   # seed=123
+  # 
   if (!is.null(seed)) {
     set.seed(seed)
   }
@@ -321,12 +458,7 @@ simulation <- function(mcf=0.9, icn=2, minor_cn=1, depth=30, num_SNP=30, seed=12
   
   # if a proportion of SNPs on CNA is actually on CN-neutral region
   num_neutral = round(num_SNP * normal_prop)
-  depth_neutral = rpois(n = num_neutral, lambda = depth)
-  SNP_depth_neutral = numeric(num_neutral)
-  for (i in seq_len(num_neutral)) {
-    SNP_depth_neutral[i] <- rbinom(n=1, size=depth_total[i], prob=0.5)
-  }
-  
+  SNP_depth_neutral = rpois(n = num_neutral, lambda = depth)
   SNP_alt_neutral = numeric(num_neutral)
   for (i in seq_len(num_neutral)) {
     SNP_alt_neutral[i] <- rbinom(n=1, size=SNP_depth_neutral[i], prob=0.5)
@@ -373,11 +505,15 @@ simulation <- function(mcf=0.9, icn=2, minor_cn=1, depth=30, num_SNP=30, seed=12
   
   # vaf_tumor <- ifelse(SNP_depth_tumor==0, 0, SNP_alt_tumor/SNP_depth_tumor)
   vaf_tumor = c((SNP_alt_germline + SNP_alt_tumor) / depth_total, vaf_neutral)
-  plot(density(vaf_tumor), xlim=c(0,1), main = "VAF_tumor")
-  qqnorm(vaf_tumor, main = "tumor")
-  qqline(vaf_tumor, col="grey")
+  # return(vaf_neutral)
+  # if (plot) {
+  #   plot(density(vaf_tumor), xlim=c(0,1), main = "VAF_tumor")
+  # }
+  # plot(density(vaf_tumor), xlim=c(0,1), main = "VAF_tumor")
+  # qqnorm(vaf_tumor, main = "tumor")
+  # qqline(vaf_tumor, col="grey")
   
-  um = is.unimodal(vaf_tumor)
-  return(um)
+  is.unimodal(vaf_tumor)
+  # return(um)
 }
 
