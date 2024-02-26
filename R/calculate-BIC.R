@@ -1,35 +1,41 @@
 #' @import magrittr
-calcChainBIC <- function(chains, input.data, pattern) {
-  # n <- input.data$I * input.data$S
-  # est_K <- estimateCCFs(chains$w_chain) %>%
-  #   nrow(.)
-  # ll <- calcChainLogLik(chains, input.data, est_K)
-  # 
-  # BIC <- calcBIC(n, est_K, ll)
+calcChainBIC <- function(chains, input.data, pattern, model_type) {
   options(dplyr.summarise.inform = FALSE)
-  w <- chains$w_chain%>%
+  mcf <- chains$mcf_chain%>%
     mutate(value = round(value,5),
-           Cluster = as.numeric(gsub("w\\[(.*),.*","\\1", Parameter)),
+           Cluster = as.numeric(gsub("mcf\\[(.*),.*","\\1", Parameter)),
            Sample = as.numeric(gsub(".*,(.*)\\]","\\1", Parameter)))%>%
     group_by(Cluster,Sample)%>%
-    summarize(w = mean(value))%>%
+    reframe(mcf = mean(value))%>%
     ungroup()%>%
-    spread(key = Sample, value = w)
+    spread(key = Sample, value = mcf)
   
   ww <- writeClusterAssignmentsTable(chains$z_chain)%>%
     mutate(Mut_ID = as.numeric(gsub("Mut","",Mut_ID)))%>%
     arrange(Mut_ID)%>%
-    left_join(w, by = "Cluster")%>%
+    left_join(mcf, by = "Cluster")%>%
     select(-c("Mut_ID","Cluster"))%>%
     as.matrix()
   
   ww <- ww[,which(strsplit(pattern, split="")[[1]]=="1")]
   
-  vaf <- (ww + (input.data$m - 1) * input.data$cncf) / (2 - 2 * input.data$cncf + input.data$cncf * input.data$icn)
+  mm <- writeMultiplicityTable(chains$m_chain)%>%
+    mutate(Mut_ID = as.numeric(gsub("Mut","",Mut_ID)))%>%
+    arrange(Mut_ID)%>%
+    select(c("Cluster")) %>%
+    as.matrix()
   
+  mm <- replicate(input.data$S, mm[, 1])
+  
+  is_cn <- replicate(input.data$S, input.data$is_cn)
+  if (model_type=="type1") {
+    vaf <- ww / 2
+    vaf <- ifelse(is_cn==0, ww/input.data$tcn, (ww * mm + 1 - ww) / input.data$tcn)
+  }
+
   lik <- sum(dbinom(input.data$y,input.data$n,vaf,log = T))
   
-  est_K <- estimateCCFs(chains$w_chain) %>% nrow(.)
+  est_K <- estimateMCFs(chains$mcf_chain) %>% nrow(.)
   
   BIC <- log(input.data$I*input.data$S)*est_K-2*lik
   return(BIC)
