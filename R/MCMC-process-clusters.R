@@ -1,28 +1,85 @@
+#' Determine most probable mutation cluster assignments by taking those with highest posterior probability
+#' 
+#' @export
+#' @param z_chain MCMC chain of mutation cluster assignment values, which is the second item in the list returned by \code{clusterSep}
+estimateMultiplicity <- function(m_chain) {
+  it <- max(m_chain$Iteration)
+  mcmc_m <- m_chain %>%
+    group_by(Parameter, value) %>%
+    reframe(n=n(),
+            maxiter=it) %>%
+    mutate(probability=n/maxiter) %>%
+    ungroup()
+  map_m <- mcmc_m %>%
+    group_by(Parameter) %>%
+    reframe(value=value[probability==max(probability)]) %>%
+    ungroup()
+  
+  # choose first cluster if equal probability
+  map_m_count <- map_m %>% 
+    group_by(Parameter) %>%
+    reframe(map_count = n()) %>%
+    ungroup()
+  if (any(map_m_count$map_count > 1)) {
+    mut_ind <- which(map_m_count$map_count > 1)
+    for (i in mut_ind) {
+      dup_var <- as.numeric(gsub("m\\[|]", "", map_m_count$Parameter[i]))
+      map_m_dups <- which(gsub("m\\[|]", "", map_m$Parameter) == dup_var)
+      dup_ind <- map_m_dups[-1]
+      map_m <- map_m[-dup_ind, ]
+    }
+  }
+  return(map_m)
+}
+
+#' Determine most probable mutation cluster assignments by taking those with highest posterior probability. 
+#' 
+#' @export
+#' @param m_chain MCMC chain of mutation cluster assignment values, which is the second item in the list returned by \code{clusterSep}
+#' @param Mut_ID Vector of mutation IDs, same order as provided as input data (e.g. indata$Mut_ID)
+#' @return A tibble listing mutation IDs and their cluster assignments
+writeMultiplicityTable <- function(m_chain, Mut_ID = NULL) {
+  map_m <- estimateMultiplicity(m_chain) 
+  if (is.null(Mut_ID)) {
+    Mut_ID <- paste0("Mut", 1:nrow(map_z))
+  }
+  map_m <- map_m %>%
+    mutate(Parameter_n = as.numeric(gsub("m\\[(\\d+)\\]","\\1",Parameter)))%>%
+    arrange(Parameter_n)%>%
+    mutate(Mut_ID = Mut_ID, Cluster = value)%>%
+    select(Mut_ID, Cluster)%>%
+    arrange(Cluster)
+  
+  map_m <- map_m %>%
+    arrange(Cluster)
+  return(map_m)
+}
+
 #' Determine the most probable cluster CCF values by taking the mode of the posterior distributions
 #' 
 #' @export
 #' @param w_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
 #' @return matrix of estimated cluster CCFs
-estimateCCFs <- function(w_chain) {
-  S <- numberSamples(w_chain)
-  K <- numberClusters(w_chain)
+estimateMCFs <- function(mcf_chain) {
+  S <- numberSamples(mcf_chain)
+  K <- numberClusters(mcf_chain)
   # density plot 
-  w.dens <- ggplot(w_chain, aes(x = value)) +
+  mcf.dens <- ggplot(mcf_chain, aes(x = value)) +
     geom_density() +
     facet_wrap(~Parameter, ncol = S, scales = "free_y") +
     theme_light()
-  # find peak for MAP w
-  w.dens.p <- ggplot_build(w.dens)$data[[1]]
-  w.map <- w.dens.p %>%
+  # find peak for MAP mcf
+  mcf.dens.p <- ggplot_build(mcf.dens)$data[[1]]
+  mcf.map <- mcf.dens.p %>%
     as_tibble() %>%
     group_by(PANEL) %>%
-    summarize(value = x[max(y) == y])
-  w.map <- w.map %>%
-    mutate(Parameter = unique(w_chain$Parameter),
+    reframe(value = x[max(y) == y])
+  mcf.map <- mcf.map %>%
+    mutate(Parameter = unique(mcf_chain$Parameter),
            value_rounded = round(value, 2))
-  # return w matrix
-  w.map.matrix <- matrix(w.map$value_rounded, K, S, byrow=TRUE)
-  return(w.map.matrix)
+  # return mcf matrix
+  mcf.map.matrix <- matrix(mcf.map$value_rounded, K, S, byrow=TRUE)
+  return(mcf.map.matrix)
 }
 
 #' @importFrom stringr str_replace
@@ -41,7 +98,7 @@ numberClusters <- function(mcf_stats){
   params <- as.character(mcf_stats$Parameter)
   K <- strsplit(params, ",") %>%
     sapply("[", 1) %>%
-    str_replace("w\\[", "") %>%
+    str_replace("mcf\\[", "") %>%
     as.numeric() %>%
     max()
   K
@@ -53,17 +110,17 @@ numberClusters <- function(mcf_stats){
 #' @param w_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
 #' @param Sample_ID Vector of sample IDs, same order as provided as input data (e.g. indata$Sample_ID)
 #' @return A tibble of estimated cluster CCFs in each sample 
-writeClusterCCFsTable <- function(w_chain, Sample_ID = NULL) {
-  map_w <- as.data.frame(estimateCCFs(w_chain))
+writeClusterCCFsTable <- function(mcf_chain, Sample_ID = NULL) {
+  map_mcf <- as.data.frame(estimateMCFs(mcf_chain))
   
   if (is.null(Sample_ID)) {
-    Sample_ID <- paste0("Sample ", 1:ncol(map_w))
+    Sample_ID <- paste0("Sample ", 1:ncol(map_mcf))
   }
-  colnames(map_w) <- Sample_ID
-  map_w <- map_w %>%
+  colnames(map_mcf) <- Sample_ID
+  map_mcf <- map_mcf %>%
     as_tibble() %>%
-    bind_cols(tibble(Cluster = 1:nrow(map_w)), .)
-  return(map_w)
+    bind_cols(tibble(Cluster = 1:nrow(map_mcf)), .)
+  return(map_mcf)
 }
 
 #' Determine most probable mutation cluster assignments by taking those with highest posterior probability
@@ -74,19 +131,19 @@ estimateClusterAssignments <- function(z_chain) {
   it <- max(z_chain$Iteration)
   mcmc_z <- z_chain %>%
     group_by(Parameter, value) %>%
-    summarize(n=n(),
+    reframe(n=n(),
               maxiter=it) %>%
     mutate(probability=n/maxiter) %>%
     ungroup()
   map_z <- mcmc_z %>%
     group_by(Parameter) %>%
-    summarize(value=value[probability==max(probability)]) %>%
+    reframe(value=value[probability==max(probability)]) %>%
     ungroup()
   
   # choose first cluster if equal probability
   map_z_count <- map_z %>% 
     group_by(Parameter) %>%
-    summarize(map_count = n()) %>%
+    reframe(map_count = n()) %>%
     ungroup()
   if (any(map_z_count$map_count > 1)) {
     mut_ind <- which(map_z_count$map_count > 1)
@@ -122,7 +179,7 @@ writeClusterAssignmentsTable <- function(z_chain, w_chain=NULL, cncf=NULL, Mut_I
     if (is.null(w_chain)) {
       warning("w_chain information is required to add CNA to cluster assignment table")
     } else {
-      w_mat <- estimateCCFs(w_chain)
+      w_mat <- estimateMCFs(w_chain)
       for (i in seq_len(nrow(cncf))) {
         cls = which(apply(w_mat, 1, function(x) return(all(x == cncf_update[i,]))))
         map_z <- map_z %>% add_row(Mut_ID=rownames(cncf)[i], Cluster=cls)
