@@ -41,7 +41,7 @@ estimateMultiplicity <- function(m_chain) {
 writeMultiplicityTable <- function(m_chain, Mut_ID = NULL) {
   map_m <- estimateMultiplicity(m_chain) 
   if (is.null(Mut_ID)) {
-    Mut_ID <- paste0("Mut", 1:nrow(map_z))
+    Mut_ID <- paste0("Mut", 1:nrow(map_m))
   }
   map_m <- map_m %>%
     mutate(Parameter_n = as.numeric(gsub("m\\[(\\d+)\\]","\\1",Parameter)))%>%
@@ -58,7 +58,7 @@ writeMultiplicityTable <- function(m_chain, Mut_ID = NULL) {
 #' Determine the most probable cluster CCF values by taking the mode of the posterior distributions
 #' 
 #' @export
-#' @param w_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
+#' @param mcf_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
 #' @return matrix of estimated cluster CCFs
 estimateMCFs <- function(mcf_chain) {
   S <- numberSamples(mcf_chain)
@@ -107,10 +107,10 @@ numberClusters <- function(mcf_stats){
 #' Determine the most probable cluster CCF values by taking the mode of the posterior distributions
 #' 
 #' @export
-#' @param w_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
+#' @param mcf_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
 #' @param Sample_ID Vector of sample IDs, same order as provided as input data (e.g. indata$Sample_ID)
 #' @return A tibble of estimated cluster CCFs in each sample 
-writeClusterCCFsTable <- function(mcf_chain, Sample_ID = NULL) {
+writeClusterMCFsTable <- function(mcf_chain, Sample_ID = NULL) {
   map_mcf <- as.data.frame(estimateMCFs(mcf_chain))
   
   if (is.null(Sample_ID)) {
@@ -163,7 +163,7 @@ estimateClusterAssignments <- function(z_chain) {
 #' @param z_chain MCMC chain of mutation cluster assignment values, which is the second item in the list returned by \code{clusterSep}
 #' @param Mut_ID Vector of mutation IDs, same order as provided as input data (e.g. indata$Mut_ID)
 #' @return A tibble listing mutation IDs and their cluster assignments
-writeClusterAssignmentsTable <- function(z_chain, w_chain=NULL, cncf=NULL, Mut_ID = NULL) {
+writeClusterAssignmentsTable <- function(z_chain, mcf_chain=NULL, cncf=NULL, Mut_ID = NULL) {
   map_z <- estimateClusterAssignments(z_chain) 
   if (is.null(Mut_ID)) {
     Mut_ID <- paste0("Mut", 1:nrow(map_z))
@@ -176,10 +176,10 @@ writeClusterAssignmentsTable <- function(z_chain, w_chain=NULL, cncf=NULL, Mut_I
     arrange(Cluster)
   
   if (!is.null(cncf)) {
-    if (is.null(w_chain)) {
-      warning("w_chain information is required to add CNA to cluster assignment table")
+    if (is.null(mcf_chain)) {
+      warning("mcf_chain information is required to add CNA to cluster assignment table")
     } else {
-      w_mat <- estimateMCFs(w_chain)
+      w_mat <- estimateMCFs(mcf_chain)
       for (i in seq_len(nrow(cncf))) {
         cls = which(apply(w_mat, 1, function(x) return(all(x == cncf_update[i,]))))
         map_z <- map_z %>% add_row(Mut_ID=rownames(cncf)[i], Cluster=cls)
@@ -214,35 +214,44 @@ collectBestKChains <- function(all_set_results, chosen_K = NULL) {
 #' 
 #' @export
 #' @import dplyr
-#' @param best_set_chains List of lists of MCMC chains (w_chain, z_chain, ystar_chain) for each mutation set
+#' @param best_set_chains List of lists of MCMC chains (mcf_chain, z_chain, ystar_chain) for each mutation set
 #' @param indata List of input data objects (same as provided to clusterSep)
 mergeSetChains <- function(best_set_chains, indata) {
   best_K_vals <- unname(sapply(best_set_chains, function(x) max(x$z_chain$value)))
   sep_list <- separateMutationsBySamplePresence(indata)
   
   # first set doesn't need to change cluster labels
-  w_chain <- best_set_chains[[1]]$w_chain
+  mcf_chain <- best_set_chains[[1]]$mcf_chain
+  temp_m_chain <- best_set_chains[[1]]$m_chain
+  temp_icn_chain <-  best_set_chains[[1]]$icn_chain
   temp_z_chain <- best_set_chains[[1]]$z_chain
   temp_ystar_chain <- best_set_chains[[1]]$ystar_chain
   
   if (length(best_set_chains) > 1) {
     # still need to change mutation indices if more than 1 box
     z_chain <- relabel_z_chain_mut_only(temp_z_chain, sep_list[[1]]$mutation_indices)
+    m_chain <- relabel_m_chain_mut_only(temp_m_chain, sep_list[[1]]$mutation_indices)
+    icn_chain <- relabel_icn_chain_mut_only(temp_icn_chain, sep_list[[1]]$mutation_indices)
     ystar_chain <- relabel_ystar_chain(temp_ystar_chain,
                                        sep_list[[1]]$mutation_indices)
     for (i in 2:length(best_set_chains)) {
-      temp_w_chain <- best_set_chains[[i]]$w_chain
+      temp_mcf_chain <- best_set_chains[[i]]$mcf_chain
+      temp_m_chain <- best_set_chains[[i]]$m_chain
+      temp_icn_chain <-  best_set_chains[[i]]$icn_chain
       temp_z_chain <- best_set_chains[[i]]$z_chain
       temp_ystar_chain <- best_set_chains[[i]]$ystar_chain
       new_cluster_labels <- seq_len(best_K_vals[i]) + sum(best_K_vals[1:(i-1)])
       
-      temp_relabeled_w_chain <- relabel_w_chain(temp_w_chain, new_cluster_labels)
+      
+      
+      ###WORKING HERE###
+      temp_relabeled_mcf_chain <- relabel_mcf_chain(temp_mcf_chain, new_cluster_labels)
       temp_relabeled_z_chain <- relabel_z_chain(temp_z_chain, new_cluster_labels, 
                                                 sep_list[[i]]$mutation_indices)
       temp_relabeled_ystar_chain <- relabel_ystar_chain(temp_ystar_chain,
                                                         sep_list[[i]]$mutation_indices)
       
-      w_chain <- rbind(w_chain, temp_relabeled_w_chain)
+      mcf_chain <- rbind(mcf_chain, temp_relabeled_mcf_chain)
       z_chain <- rbind(z_chain, temp_relabeled_z_chain)
       ystar_chain <- rbind(ystar_chain, temp_relabeled_ystar_chain)
     }
@@ -252,15 +261,15 @@ mergeSetChains <- function(best_set_chains, indata) {
   }
   
   # set levels for Parameter
-  w_chain <- w_chain %>% 
-    mutate(k = as.numeric(gsub("w\\[", "", 
-                               sapply(w_chain$Parameter, 
+  mcf_chain <- mcf_chain %>% 
+    mutate(k = as.numeric(gsub("mcf\\[", "", 
+                               sapply(mcf_chain$Parameter, 
                                       function(x) strsplit(as.character(x), ",")[[1]][1])))) %>%
     mutate(s = as.numeric(gsub("\\]", "", 
-                               sapply(w_chain$Parameter, 
+                               sapply(mcf_chain$Parameter, 
                                       function(x) strsplit(as.character(x), ",")[[1]][2])))) %>%
     arrange(k, s) %>%
-    mutate(Parameter = factor(Parameter, levels = unique(w_chain$Parameter))) %>%
+    mutate(Parameter = factor(Parameter, levels = unique(mcf_chain$Parameter))) %>%
     select(Iteration, Chain, Parameter, value)
   
   z_chain_param_order <- tibble(Parameter = unique(z_chain$Parameter)) %>%
@@ -282,7 +291,7 @@ mergeSetChains <- function(best_set_chains, indata) {
     arrange(Mutation_index, s) %>%
     mutate(Parameter = factor(Parameter, levels = unique(Parameter)))
   
-  chains <- list(w_chain = w_chain,
+  chains <- list(mcf_chain = mcf_chain,
                  z_chain = z_chain,
                  ystar_chain = ystar_chain)
   return(chains)
@@ -311,6 +320,44 @@ relabel_z_chain <- function(z_chain, new_cluster_labels, mutation_indices) {
     arrange(new_i) %>%
     select(Iteration, Chain, Parameter, value)
   return(new_z)
+}
+
+relabel_m_chain_mut_only <- function(m_chain, mutation_indices) {
+  # mutation_indices = numeric vector of original mutation indices prior to separating by sample presence
+  # cluster labels are left unchanged 
+  if (length(mutation_indices) != length(unique(m_chain$Parameter))) {
+    stop("number of supplied mutation indices does not match the number of mutations in m_chain")
+  }
+  new_m <- m_chain %>%
+    mutate(i = as.numeric(gsub("\\]", "", 
+                               gsub("m\\[", "", 
+                                    sapply(m_chain$Parameter, 
+                                           function(x) strsplit(as.character(x), ",")[[1]][1])))))
+  new_m <- new_m %>%
+    mutate(new_i = mutation_indices[i]) %>%
+    mutate(Parameter = paste0("m[", new_i, "]")) %>% 
+    arrange(new_i) %>%
+    select(Iteration, Chain, Parameter, value)
+  return(new_m)
+}
+
+relabel_icn_chain_mut_only <- function(icn_chain, mutation_indices) {
+  # mutation_indices = numeric vector of original mutation indices prior to separating by sample presence
+  # cluster labels are left unchanged 
+  if (length(mutation_indices) != length(unique(icn_chain$Parameter))) {
+    stop("number of supplied mutation indices does not match the number of mutations in icn_chain")
+  }
+  new_icn <- icn_chain %>%
+    mutate(i = as.numeric(gsub("\\]", "", 
+                               gsub("icn\\[", "", 
+                                    sapply(icn_chain$Parameter, 
+                                           function(x) strsplit(as.character(x), ",")[[1]][1])))))
+  new_icn <- new_icn %>%
+    mutate(new_i = mutation_indices[i]) %>%
+    mutate(Parameter = paste0("icn[", new_i, "]")) %>% 
+    arrange(new_i) %>%
+    select(Iteration, Chain, Parameter, value)
+  return(new_icn)
 }
 
 relabel_z_chain_mut_only <- function(z_chain, mutation_indices) {
@@ -350,21 +397,21 @@ relabel_ystar_chain <- function(ystar_chain, mutation_indices) {
   return(new_ystar)
 }
 
-relabel_w_chain <- function(w_chain, new_cluster_labels) {
+relabel_mcf_chain <- function(mcf_chain, new_cluster_labels) {
   # new_cluster_labels = numeric vector of labels that map to 1:length(new_cluster_labels)
-  new_w <- w_chain %>% 
-    mutate(k = as.numeric(gsub("w\\[", "", 
-                               sapply(w_chain$Parameter, 
+  new_mcf <- mcf_chain %>% 
+    mutate(k = as.numeric(gsub("mcf\\[", "", 
+                               sapply(mcf_chain$Parameter, 
                                       function(x) strsplit(as.character(x), ",")[[1]][1])))) %>%
     mutate(s = as.numeric(gsub("\\]", "", 
-                               sapply(w_chain$Parameter, 
+                               sapply(mcf_chain$Parameter, 
                                       function(x) strsplit(as.character(x), ",")[[1]][2]))))
-  if (length(new_cluster_labels) != length(unique(new_w$k))) {
-    stop("number of supplied new cluster labels does not match the number of clusters in w_chain")
+  if (length(new_cluster_labels) != length(unique(new_mcf$k))) {
+    stop("number of supplied new cluster labels does not match the number of clusters in mcf_chain")
   }
-  new_w <- new_w %>% 
-    mutate(k_new = new_cluster_labels[new_w$k]) %>%
-    mutate(Parameter = paste0("w[", k_new, ",", s, "]")) %>%
+  new_mcf <- new_mcf %>% 
+    mutate(k_new = new_cluster_labels[new_mcf$k]) %>%
+    mutate(Parameter = paste0("mcf[", k_new, ",", s, "]")) %>%
     select(Iteration, Chain, Parameter, value)
-  return(new_w)
+  return(new_mcf)
 }
