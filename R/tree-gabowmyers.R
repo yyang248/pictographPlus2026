@@ -4,13 +4,13 @@
 #' @param w matrix of CCF values (rows = clusters, columns = samples)
 #' @param lineage_precedence_thresh maximum allowed violation of lineage precedence (default = 0.1)
 #' @param sum_filter_thresh thresh maximum allowed violation of Sum Condition (default = 0.2)
-generateAllTrees <- function(w, lineage_precedence_thresh=0.1, sum_filter_thresh=0.2) {
-  w_mat <- estimateCCFs(w)
-  w_mat <- assign("w_mat", w_mat, envir = .GlobalEnv)
-  graph_G_pre <- prepareGraph(w_mat, lineage_precedence_thresh)
-  graph_G <- filterEdgesBasedOnCCFs(graph_G_pre, w_mat, thresh = lineage_precedence_thresh)
+generateAllTrees <- function(mcf, lineage_precedence_thresh=0.1, sum_filter_thresh=0.2) {
+  mcf_mat <- estimateMCFs(mcf)
+  mcf_mat <- assign("mcf_mat", mcf_mat, envir = .GlobalEnv)
+  graph_G_pre <- prepareGraph(mcf_mat, lineage_precedence_thresh)
+  graph_G <- filterEdgesBasedOnCCFs(graph_G_pre, mcf_mat, thresh = lineage_precedence_thresh)
   graph_G <- assign("graph_G", graph_G, envir = .GlobalEnv)
-  enumerateSpanningTreesModified(graph_G, w_mat, sum_filter_thresh = sum_filter_thresh)
+  enumerateSpanningTreesModified(graph_G, mcf_mat, sum_filter_thresh = sum_filter_thresh)
 }
 
 #' Create tibble of possible edges from CCF values based on w_mat only
@@ -18,14 +18,14 @@ generateAllTrees <- function(w, lineage_precedence_thresh=0.1, sum_filter_thresh
 #' @export
 #' @param w matrix of CCF values (rows = clusters, columns = samples)
 #' @return graph_G tibble of possible edges with columns edge, parent, child
-prepareGraph <- function(w_mat, thresh) {
+prepareGraph <- function(mcf_mat, thresh) {
   graph_pre <- data.frame(edge = character(), parent = character(), child = character())
-  for (i in seq_len(nrow(w_mat))) {
+  for (i in seq_len(nrow(mcf_mat))) {
     graph_pre <- graph_pre %>% add_row(edge = paste("root->", i, sep = ""), parent = "root", child = as.character(i))
-    for (j in seq_len(nrow(w_mat))) {
+    for (j in seq_len(nrow(mcf_mat))) {
       if (i!=j) {
-        i_row = w_mat[i, ]
-        j_row = w_mat[j, ]
+        i_row = mcf_mat[i, ]
+        j_row = mcf_mat[j, ]
         if (all(j_row-i_row > -thresh)) {
           graph_pre <- graph_pre %>% add_row(edge = paste(j, "->", i, sep = ""), parent = as.character(j), child = as.character(i))
         }
@@ -41,13 +41,13 @@ prepareGraph <- function(w_mat, thresh) {
 #' @param graph_G tibble of possible edges with columns edge, parent, child
 #' @param w matrix of CCF values (rows = clusters, columns = samples)
 #' @param thresh maximum allowed violation of lineage precedence (default = 0.1)
-filterEdgesBasedOnCCFs <- function(graph_G, w, thresh = 0.1) {
-  check_edges_logical <- apply(graph_G, 1, function(edge) checkEdge(edge, w, thresh))
+filterEdgesBasedOnCCFs <- function(graph_G, mcf, thresh = 0.1) {
+  check_edges_logical <- apply(graph_G, 1, function(edge) checkEdge(edge, mcf, thresh))
   filtered_graph_G <- graph_G[check_edges_logical, ]
   return(filtered_graph_G)
 }
 
-checkEdge <- function(edge, w, thresh = 0.2) {
+checkEdge <- function(edge, mcf, thresh = 0.2) {
   # returns TRUE if satisfies lineage precedence with given threshold
   # returns FALSE if violates i.e. child_ccf - parent_ccf > thresh in any sample
   # edge is in the format c(edge_name, parent, child)
@@ -57,11 +57,11 @@ checkEdge <- function(edge, w, thresh = 0.2) {
   c <- as.character(edge[3])
   
   if (p == "root") {
-    parent_ccfs <- rep(1, ncol(w))
+    parent_ccfs <- rep(1, ncol(mcf))
   } else {
-    parent_ccfs <- w[as.numeric(p), ]
+    parent_ccfs <- mcf[as.numeric(p), ]
   }
-  child_ccfs <- w[as.numeric(c), ]
+  child_ccfs <- mcf[as.numeric(c), ]
   
   diff <- child_ccfs - parent_ccfs
   if (any(diff > thresh)) {
@@ -77,7 +77,7 @@ checkEdge <- function(edge, w, thresh = 0.2) {
 #' @param graph_G tibble of possible edges with columns edge, parent, child
 #' @param w matrix of CCF values (rows = clusters, columns = samples)
 #' @param sum_filter_thresh thresh maximum allowed violation of Sum Condition (default = 0.2)
-enumerateSpanningTreesModified <- function(graph_G, w, sum_filter_thresh=0.2) {
+enumerateSpanningTreesModified <- function(graph_G, mcf, sum_filter_thresh=0.2) {
   # all_spanning_trees must be set as an empty list, global variable, before function is called
   # graph_G must be set as global variable before function is called
   all_spanning_trees <- assign("all_spanning_trees", list(), envir = .GlobalEnv)
@@ -86,7 +86,7 @@ enumerateSpanningTreesModified <- function(graph_G, w, sum_filter_thresh=0.2) {
   all_vertices <- verticesInGraph(graph_G)
   tree_T <- tibble(parent = character(), child = character())
   
-  growModified(tree_T, all_vertices, w, sum_filter_thresh)
+  growModified(tree_T, all_vertices, mcf, sum_filter_thresh)
 }
 
 verticesInGraph <- function(tb) {
