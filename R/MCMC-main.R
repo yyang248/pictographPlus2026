@@ -83,28 +83,25 @@ mcmcMain <- function(mutation_file,
   
   # 4. collect best chains
   best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$chosen_K)
+  
   chains <- mergeSetChains(best_set_chains, input_data)
   
-  # plotChainsCCF(chains$w_chain)
-  # plotCCFViolin(chains$w_chain, chains$z_chain, indata = input_data)
-  # plotClusterAssignmentProbVertical(chains$z_chain, chains$w_chain)
+  plotChainsCCF(chains$mcf_chain)
+  plotMCFViolin(chains$mcf_chain, chains$z_chain, indata = input_data)
+  plotClusterAssignmentProbVertical(chains$z_chain, chains$mcf_chain)
+  
   
   # re-estimate cncf by assigning cna to mcf clusters
-  cncf_update <- reassignCNCF(cncf_init, chains$w_chain)
-  warning("mcmcMain: re-assign cluster mcf after merging CNA")
-  cna_update <- reassignCNA(cncf_update, data$tcn)
+  # cncf_update <- reassignCNCF(cncf_init, chains$w_chain)
+  # warning("mcmcMain: re-assign cluster mcf after merging CNA")
+  # cna_update <- reassignCNA(cncf_update, data$tcn)
   
   
+  mcfTable = writeClusterMCFsTable(chains$mcf_chain)
   
+  write.table(mcfTable, file=paste(outputDir, "mcf.csv", sep=""), quote = FALSE, sep = ",", row.names = F)
   
-  
-  
-  generateAllTrees(chains$w_chain, lineage_precedence_thresh = 0.02, sum_filter_thresh = 0.1)
-  ccfTable = writeClusterCCFsTable(chains$w_chain)
-  
-  # write.table(ccfTable, file=paste(outputDir, "ccf.csv", sep=""), quote = FALSE, sep = ",", row.names = F)
-  
-  clusterAssingmentTable = writeClusterAssignmentsTable(chains$z_chain, w_chain=chains$w_chain, Mut_ID = data$MutID, cncf=cncf_update)
+  clusterAssingmentTable = writeClusterAssignmentsTable(chains$z_chain, Mut_ID = input_data$MutID)
   
   for (i in seq_len(nrow(clusterAssingmentTable))) {
     # rename chromosome name if CNA in a cluster
@@ -126,6 +123,7 @@ mcmcMain <- function(mutation_file,
   }
   
   # write.table(clusterAssingmentTable, file=paste(outputDir, "clusterAssign.csv", sep=""), quote = FALSE, sep = ",", row.names = F)
+  generateAllTrees(chains$mcf_chain, lineage_precedence_thresh = 0.02, sum_filter_thresh = 0.1)
   
   scores <- calcTreeScores(chains$w_chain, all_spanning_trees)
 
