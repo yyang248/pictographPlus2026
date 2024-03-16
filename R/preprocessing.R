@@ -148,7 +148,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, sta
   
   if ("baf" %in% colnames(data)) {
     message("inferring allele-specific copy number using BAF")
-  } else if (SNV_file) {
+  } else if (!is.null(SNV_file)) {
     message("inferring allele-specific copy number using heterozygous SNVs")
     data <- check_sample_LOH(data, outputDir, SNV_file, tcn_normal_range=tcn_normal_range, pval=pval) # check unimodality at both normal and tumor sample
     data <- data[data$to_keep==1,] # keep rows is to_keep is 1
@@ -157,7 +157,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, sta
   }
   
   
-  # data$tcn[data$tcn==2] <- 2.01 # make tcn=2 -> 2.01 to avoid confusion during sample presence
+  data$tcn[data$tcn==2] <- 2.01 # make tcn=2 -> 2.01 to avoid confusion during sample presence
   
   # Smooth segments so segments with different start/end position are treated the same, 
   # conditioned on overlapping and distance between positions
@@ -204,7 +204,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, sta
     rownames(tcn_alt) <- rownames(output_data)
     colnames(tcn_alt) <- colnames(output_data)
     
-  } else if (SNV_file) {
+  } else if (!is.null(SNV_file)) {
     tcn_ref <- list()
     tcn_ref = as.matrix(data[c("sample", "CNA", "tcn_ref")] %>% pivot_wider(names_from = sample, values_from = tcn_ref, values_fill = 0))
     rownames(tcn_ref) <- tcn_ref[,'CNA']
@@ -301,6 +301,8 @@ check_sample_LOH <- function(data, outputDir, SNV_file, tcn_normal_range=c(1.52,
   # set.seed(123)
   for (i in 1:rowLen) {
     # i = 1
+    # print(i)
+    toSkip = FALSE
     SNV_temp <- SNV_data %>% filter(chroms==data[i,]$chrom & position>=data[i,]$start & position<=data[i,]$end)
     sample <- data[i,]$sample
     # SNV_temp
@@ -341,32 +343,40 @@ check_sample_LOH <- function(data, outputDir, SNV_file, tcn_normal_range=c(1.52,
         cluster_number = which.max(kmeans_result$centers)
         tcn_alt[i] = round(mean(SNV_temp[[alt]][kmeans_result$cluster == cluster_number]))
         tcn_ref[i] = round(mean(SNV_temp[[ref]][kmeans_result$cluster == cluster_number]))
-      } else {
+      } else if (is.bimodal(vaf)) {
         kmeans_result <- kmeans(vaf, centers = 2)
         cluster_number = which.max(kmeans_result$centers)
         tcn_alt[i] = round(mean(SNV_temp[[alt]][kmeans_result$cluster == cluster_number]))
         tcn_ref[i] = round(mean(SNV_temp[[ref]][kmeans_result$cluster == cluster_number]))
+      } else {
+        tcn_alt[i] = -1
+        tcn_ref[i] = -1
+        toSkip = TRUE
       }
 
       # output_stats <- rbind(output_stats, matrix(c(rownames(output_data)[i], germline_depth, um_prob,um_list[[1]], germline_test$p.value, tumor_depth, um_prob_tumor, unlist(um_list[2:length(um_list)]), tumor_test$p.value), nrow=1))
       # pval_list <- c(pval_list, tumor_test$p.value)
       # check if a segment is within tcn_normal_range for LOH
-      if (!germline_test$p.value < pval/nrow(data)) {
-        if (data[i,]$tcn > tcn_normal_range[1] & data[i,]$tcn < tcn_normal_range[2]) {
-          if (tumor_test$p.value < pval/nrow(data)) {
-            to_keep_index <- c(to_keep_index, 1)
-            plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, ", pval: ", tumor_test$p.value, sep=""))
-            # print(i)
-            # stop()
+      if (toSkip) {
+        to_keep_index <- c(to_keep_index, 0)
+      } else {
+        if (!germline_test$p.value < pval/nrow(data)) {
+          if (data[i,]$tcn > tcn_normal_range[1] & data[i,]$tcn < tcn_normal_range[2]) {
+            if (tumor_test$p.value < pval/nrow(data)) {
+              to_keep_index <- c(to_keep_index, 1)
+              plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, ", pval: ", tumor_test$p.value, sep=""))
+              # print(i)
+              # stop()
+            } else {
+              to_keep_index <- c(to_keep_index, 0)
+            }
           } else {
-            to_keep_index <- c(to_keep_index, 0)
+            to_keep_index <- c(to_keep_index, 1)
+            plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, sep=""))
           }
         } else {
-          to_keep_index <- c(to_keep_index, 1)
-          plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, sep=""))
+          to_keep_index <- c(to_keep_index, 0)
         }
-      } else {
-        to_keep_index <- c(to_keep_index, 0)
       }
       
     } else {
