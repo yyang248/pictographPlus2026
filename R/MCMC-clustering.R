@@ -13,6 +13,7 @@ runMCMCForAllBoxes <- function(sep_list,
                                             ".RNG.seed" = 123)){
   
   if (model_type == "type3") {
+    model_type <- "type3"
     all_set_results <- vector("list", 1)
     names(all_set_results) <- paste0(rep("1", ncol(sep_list$y)), collapse = "")
     params = c("z", "mcf", "icn", "m", "ystar")
@@ -43,6 +44,7 @@ runMCMCForAllBoxes <- function(sep_list,
     
     for (i in seq_len(length(sep_list))) {
       # i = 2
+      # print(i)
       temp_box <- sep_list[[i]]
       # Max number of clusters cannot be more than number of mutations/min_mutation_per_cluster
       temp_max_K <- min(max_K, floor(length(temp_box$mutation_indices)/min_mutation_per_cluster))
@@ -92,7 +94,7 @@ runMutSetMCMC <- function(temp_box,
                                     model = model_type)
   
   # Format chains
-  if (nrow(temp_box$y) == 1) {
+  if (length(temp_samps_list) == 1) {
     samps_list <- list(formatChains(temp_samps_list))
     names(samps_list) <- "K1"
   } else {
@@ -150,7 +152,7 @@ runMCMCForABox <- function(box,
   # choose sample in which mutations are present
   sample_to_sort <- which(colSums(box_input_data$y) > 0)[1]
   
-  box_input_data$sample_to_sort <- sample_to_sort
+  # box_input_data$sample_to_sort <- sample_to_sort
   
   if (model_type == "type1") {
     jags.file <- file.path(extdir, "type1.jags")
@@ -380,6 +382,10 @@ filterK <- function(samps_list, min_mutation_per_cluster=1, cluster_diff_thresh=
 formatChains <- function(samps) {
   temp_z <- get.parameter.chain("z", ggmcmc::ggs(samps)) %>%
     mutate(Parameter = as.character(Parameter))
+  if (nrow(temp_z) == 0) {
+    temp_z <- get.parameter.chain("z", ggmcmc::ggs(samps) %>% mutate(Parameter = gsub("z","z[1]",Parameter))) %>%
+      mutate(Parameter = as.character(Parameter))
+  }
   temp_mcf <- get.parameter.chain("mcf", ggmcmc::ggs(samps)) %>%
     mutate(Parameter = as.character(Parameter))
   if (nrow(temp_mcf) == 0) {
@@ -390,8 +396,16 @@ formatChains <- function(samps) {
     mutate(Parameter = as.character(Parameter))
   temp_icn <- get.parameter.chain("icn", ggmcmc::ggs(samps)) %>%
     mutate(Parameter = as.character(Parameter))
+  if (nrow(temp_icn) == 0) {
+    temp_icn <- get.parameter.chain("icn", ggmcmc::ggs(samps) %>% mutate(Parameter = gsub("icn","icn[1]",Parameter))) %>%
+      mutate(Parameter = as.character(Parameter))
+  }
   temp_m <- get.parameter.chain("m", ggmcmc::ggs(samps)) %>%
     mutate(Parameter = as.character(Parameter))
+  if (nrow(temp_m) == 0) {
+    temp_m <- get.parameter.chain("m", ggmcmc::ggs(samps) %>% mutate(Parameter = gsub("\\bm\\b","m[1]",Parameter))) %>%
+      mutate(Parameter = as.character(Parameter))
+  }
   samps_list_formatted <- list(mcf_chain = temp_mcf,
                                z_chain = temp_z,
                                icn_chain = temp_icn,
