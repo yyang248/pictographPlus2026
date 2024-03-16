@@ -26,7 +26,7 @@ prepareGraph <- function(mcf_mat, thresh) {
       if (i!=j) {
         i_row = mcf_mat[i, ]
         j_row = mcf_mat[j, ]
-        if (all(j_row-i_row > -thresh)) {
+        if (all(j_row-i_row >= -thresh)) {
           graph_pre <- graph_pre %>% add_row(edge = paste(j, "->", i, sep = ""), parent = as.character(j), child = as.character(i))
         }
       }
