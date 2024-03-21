@@ -84,7 +84,7 @@ writeSetKTable <- function(all_set_results, sample_names = NULL) {
                           min_bic_k_tb$min_BIC[i],
                           getmode(c(min_bic_k_tb$min_BIC[i],min_bic_k_tb$elbow[i],min_bic_k_tb$knee[i])))
     # TO-DO
-    chosen_K[i] <-  min_bic_k_tb$min_BIC[i]
+    # chosen_K[i] <-  min_bic_k_tb$min_BIC[i]
   }
   
   min_bic_k_tb <- min_bic_k_tb %>%
