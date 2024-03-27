@@ -44,7 +44,6 @@ mcmcMain <- function(mutation_file,
   min_mutation_per_cluster <- max(floor(nrow(data$y)/50), min_mutation_per_cluster)
   
   if (ncol(data$y)==1) {
-    sample_presence = FALSE
     min_mutation_per_cluster <- max(floor(nrow(data$y)/25), min_mutation_per_cluster)
   } 
 
