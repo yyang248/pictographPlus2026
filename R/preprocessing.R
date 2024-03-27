@@ -196,11 +196,11 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, sta
     rownames(baf) = rowname
     colnames(baf) = colname
     
-    tcn_tot <- matrix(rpois(n = nrow(output_data)*ncol(output_data), lambda = 100), nrow(output_data),ncol(output_data))
+    tcn_tot <- matrix(200, nrow(output_data),ncol(output_data))
     rownames(tcn_tot) <- rownames(output_data)
     colnames(tcn_tot) <- colnames(output_data)
     
-    tcn_alt <- matrix(rbinom(n=nrow(output_data)*ncol(output_data), size=as.numeric(tcn_tot), prob=as.numeric(baf)), nrow(output_data),ncol(output_data))
+    tcn_alt <- matrix(round(tcn_tot * baf), nrow(output_data),ncol(output_data))
     rownames(tcn_alt) <- rownames(output_data)
     colnames(tcn_alt) <- colnames(output_data)
     
