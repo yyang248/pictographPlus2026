@@ -1,6 +1,7 @@
 #' run MCMC for all mutations by sample presence
 #' @export
 runMCMCForAllBoxes <- function(sep_list,
+                               sample_presence=FALSE,
                                ploidy=2,
                                max_K = 5,
                                min_mutation_per_cluster = 5,
@@ -13,8 +14,7 @@ runMCMCForAllBoxes <- function(sep_list,
                                inits = list(".RNG.name" = "base::Wichmann-Hill",
                                             ".RNG.seed" = 123)){
   
-  if (model_type == "type3") {
-    model_type <- "type3"
+  if (!sample_presence) {
     all_set_results <- vector("list", 1)
     names(all_set_results) <- paste0(rep("1", ncol(sep_list$y)), collapse = "")
     params = c("z", "mcf", "icn", "m", "ystar")
