@@ -243,7 +243,7 @@ mcmcMain <- function(mutation_file,
       }
       
     } else {
-      message("Using single model for both SSM and CNA")
+      message("Not using sample presence; Using single model for both SSM and CNA")
       ##############################################################################
       #             MCMC chain for all; no sample presence                         #
       ##############################################################################
@@ -256,7 +256,7 @@ mcmcMain <- function(mutation_file,
                          q=data$q,
                          MutID=data$MutID)
       
-      all_set_results <- runMCMCForAllBoxes(input_data, sample_presence=sample_presence, ploidy=ploidy, max_K = max_K, min_mutation_per_cluster = min_mutation_per_cluster, 
+      all_set_results <- runMCMCForAllBoxes(input_data, sample_presence=FALSE, ploidy=ploidy, max_K = max_K, min_mutation_per_cluster = min_mutation_per_cluster, 
                                             cluster_diff_thresh = cluster_diff_thresh, inits = inits,
                                             n.iter = n.iter, n.burn = n.burn, thin = thin, mc.cores = mc.cores, model_type = "type3")
       
