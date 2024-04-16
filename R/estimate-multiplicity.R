@@ -61,7 +61,7 @@ assignMultiplicity <- function(lower_mC, upper_mC, tcn) {
   return(NA)
 }
 
-estimateMultiplicity <- function(y, n, tcn) {
+estimateMultiplicity1 <- function(y, n, tcn) {
   # if no variant reads, assigning multiplicity of 1
   if (y == 0) return(1)
   mC_CI <- getmCCI(y, n, 0.9, tcn)
@@ -83,7 +83,7 @@ estimateMultiplicityMatrix <- function(data) {
       y = Y[[i, s]]
       n = N[[i, s]]
       tcn = Tcn[[i, s]]
-      m = estimateMultiplicity(y, n, tcn)
+      m = estimateMultiplicity1(y, n, tcn)
       M[i, s] = m
     }
   }
