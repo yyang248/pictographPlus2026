@@ -7,7 +7,6 @@ importFiles <- function(mutation_file,
                         outputDir=NULL, 
                         SNV_file=NULL, 
                         stat_file=NULL, 
-                        cytoband_file=NULL, 
                         alt_reads_thresh = 0, 
                         vaf_thresh = 0, 
                         cnv_max_dist=2000, 
@@ -630,23 +629,6 @@ check_LOH <- function(output_data, outputDir, SNV_file, tcn_normal_range=c(1.8, 
   return(to_keep_index)
 }
 
-#' #' get copy number cytoband and genes information
-#' importCopyNumberInfo <- function(copy_number_file) {
-#'   drivers = c()
-#'   genes = c()
-#'   cytoband = c()
-#'   
-#'   data <- read_csv(copy_number_file, show_col_types = FALSE)
-#'   data$CNA = paste(data$chrom, data$start, data$end, sep = '-')
-#'   
-#'   for (i in 1:nrow(data)) {
-#'     cytoband[data[i,]$CNA] <- data[i,]$cytoband
-#'     genes[data[i,]$CNA] <- data[i,]$genes
-#'     drivers[data[i,]$CNA] <- data[i,]$drivers
-#'   }
-#'   return(list(cytoband=cytoband, drivers=drivers, genes=genes))
-#' }
-
 #' import mutation file
 importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0) {
   data <- read_csv(mutation_file, show_col_types = FALSE)
@@ -734,16 +716,15 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   
   output_data$icn <- as.matrix(data[c("mutation", "sample", "tumor_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = tumor_integer_copy_number, values_fill = 2))
   rownames(output_data$icn) <- output_data$icn[,'mutation']
-  output_data$icn <- as.numeric(output_data$icn[,-1])
+  output_data$icn <- as.numeric(output_data$icn[,2])
   # rowname = rownames(output_data$icn)
   # colname = colnames(output_data$icn)
   # output_data$icn <- matrix(as.numeric(output_data$icn), ncol = ncol(output_data$icn))
   # rownames(output_data$icn) = rowname
   # colnames(output_data$icn) = colname
   
-  output_data$mtp <- as.matrix(data[c("mutation", "sample", "major_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = major_integer_copy_number, values_fill = 1))
-  rownames(output_data$mtp) <- output_data$mtp[,'mutation']
-  output_data$mtp <- as.numeric(output_data$mtp[,-1])
+
+  
   # output_data$mtp <- estimateMultiplicityMatrix(output_data)[,1]
   
   # rowname = rownames(output_data$mtp)
@@ -765,6 +746,14 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   output_data$I = nrow(output_data$y)
   
   output_data$tcn = output_data$icn * output_data$cncf + 2 * ( 1 - output_data$cncf)
+  
+  if ("major_integer_copy_number" %in% colnames(data)) {
+    output_data$mtp <- as.matrix(data[c("mutation", "sample", "major_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = major_integer_copy_number, values_fill = 1))
+    rownames(output_data$mtp) <- output_data$mtp[,'mutation']
+    output_data$mtp <- as.numeric(output_data$mtp[,2])
+  } else {
+    output_data$mtp <- estimateMultiplicityMatrix(output_data)[,1]
+  }
   
   # mutation_position = unique(data[c("mutation", "chrom", "start", "end")])
   # if (!all(sort(unique(data[c("mutation", "chrom", "start", "end")]) %>% pull(mutation)) == sort(output_data$MutID))) {
