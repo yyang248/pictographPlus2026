@@ -6,7 +6,6 @@ mcmcMain <- function(mutation_file,
                      outputDir=NULL,
                      SNV_file=NULL,
                      stat_file=NULL, 
-                     cytoband_file=NULL, 
                      sample_presence=FALSE,
                      dual_model=TRUE,
                      purity=0.8,
@@ -33,7 +32,6 @@ mcmcMain <- function(mutation_file,
                       outputDir, 
                       SNV_file=SNV_file, 
                       stat_file=stat_file, 
-                      cytoband_file=cytoband_file, 
                       alt_reads_thresh=alt_reads_thresh, 
                       vaf_thresh=vaf_thresh, 
                       cnv_max_dist=cnv_max_dist, 
@@ -210,6 +208,7 @@ mcmcMain <- function(mutation_file,
                            is_cn=data$is_cn[index],
                            MutID=data$MutID[index])
         
+        input_data <- assign("input_data", input_data, envir = .GlobalEnv)
         # 3. separate mutations by sample presence
         # sep_list <- separateMutationsBySamplePresence(input_data)
         
@@ -268,6 +267,8 @@ mcmcMain <- function(mutation_file,
                          q=data$q,
                          MutID=data$MutID)
       
+      input_data <- assign("input_data", input_data, envir = .GlobalEnv)
+      
       all_set_results <- runMCMCForAllBoxes(input_data, sample_presence=FALSE, purity=purity, ploidy=ploidy, max_K = max_K, min_mutation_per_cluster = min_mutation_per_cluster, 
                                             cluster_diff_thresh = cluster_diff_thresh, inits = inits,
                                             n.iter = n.iter, n.burn = n.burn, thin = thin, mc.cores = mc.cores, model_type = "type3")
@@ -285,7 +286,6 @@ mcmcMain <- function(mutation_file,
 
   
   chains <- mergeSetChains(best_set_chains, input_data)
-  
   
   png(paste(outputDir, "mcf.png", sep="/"))
   plotChainsMCF(chains$mcf_chain)
@@ -314,36 +314,7 @@ mcmcMain <- function(mutation_file,
   icnTableCN$Multiplicity <- multiplicityTableCN$Multiplicity
   write.table(icnTableCN, file=paste(outputDir, "CN_results.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   
-  ### Clean copy number segments by removing segments with icn of 2 and multiplicity of 1
   
-  toKeepIndex = c()
-  for (i in seq_len(nrow(clusterAssingmentTable))) {
-    # rename chromosome name if CNA in a cluster
-    
-    if (clusterAssingmentTable[i,]$Mut_ID %in% icnTableCN$Mut_ID) {
-      # print(clusterAssingmentTable[i,]$Mut_ID)
-      
-      icnInfo <- icnTableCN %>% filter(Mut_ID==clusterAssingmentTable[i,]$Mut_ID)
-      if (icnInfo$icn==2 & icnInfo$Multiplicity==1) {
-        # print(icnInfo)
-        # stop("stop")
-        toKeepIndex <- c(toKeepIndex, 0)
-      } else {
-        major_cn = max(icnInfo$Multiplicity, icnInfo$icn-icnInfo$Multiplicity)
-        clusterAssingmentTable[i,]$Mut_ID <- paste(clusterAssingmentTable[i,]$Mut_ID, ";icn:", icnInfo$icn, ";", "major_cn:", major_cn, sep="")
-        # print(change)
-        toKeepIndex <- c(toKeepIndex, 1)
-        # stop()
-      }
-      
-    } else {
-      toKeepIndex <- c(toKeepIndex, 1)
-    }
-  }
-  clusterAssingmentTable$idx <- toKeepIndex
-  clusterAssingmentTable <- clusterAssingmentTable %>% filter(toKeepIndex==1) %>% select(-idx)
-  write.table(clusterAssingmentTable, file=paste(outputDir, "clusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
-
   threshes <- allThreshes()
   # print(threshes)
 
@@ -357,8 +328,18 @@ mcmcMain <- function(mutation_file,
 
   # generateAllTrees(chains$mcf_chain, lineage_precedence_thresh = 0.1, sum_filter_thresh = 0.2)
   
-  scores <- calcTreeScores(chains$mcf_chain, all_spanning_trees, purity)
-
+  # NEED TO CHECK IS copy_number_file is provided ### WORKING
+  if (is.null(copy_number_file)) {
+    cncfTable <- data$cncf
+  } else {
+    # warning("cncfTable <- findCncf(data, input_data, chains) needs testing")
+    cncfTable <- findCncf(data, input_data, chains)
+  }
+  
+  # scores <- calcTreeScores(chains$mcf_chain, all_spanning_trees, purity)
+  
+  scores <- calculateTreeScoreMutations(chains$mcf_chain, data, icnTable, cncfTable, multiplicityTable, clusterAssingmentTable, purity, all_spanning_trees)
+    
   # # plot all tree with best scores
   # for (i in seq_len(length(which(scores == max(scores))))) {
   #   idx = which(scores == max(scores))[i]
@@ -419,10 +400,39 @@ mcmcMain <- function(mutation_file,
   # plotSubclonePie(subclone_props, sample_names=colnames(input_data$y))
   # plotSubcloneBar(subclone_props, sample_names=colnames(input_data$y))
   
+  ### Clean copy number segments by removing segments with icn of 2 and multiplicity of 1
+  
+  toKeepIndex = c()
+  for (i in seq_len(nrow(clusterAssingmentTable))) {
+    # rename chromosome name if CNA in a cluster
+    
+    if (clusterAssingmentTable[i,]$Mut_ID %in% icnTableCN$Mut_ID) {
+      # print(clusterAssingmentTable[i,]$Mut_ID)
+      
+      icnInfo <- icnTableCN %>% filter(Mut_ID==clusterAssingmentTable[i,]$Mut_ID)
+      if (icnInfo$icn==2 & icnInfo$Multiplicity==1) {
+        # print(icnInfo)
+        # stop("stop")
+        toKeepIndex <- c(toKeepIndex, 0)
+      } else {
+        major_cn = max(icnInfo$Multiplicity, icnInfo$icn-icnInfo$Multiplicity)
+        clusterAssingmentTable[i,]$Mut_ID <- paste(clusterAssingmentTable[i,]$Mut_ID, ";icn:", icnInfo$icn, ";", "major_cn:", major_cn, sep="")
+        # print(change)
+        toKeepIndex <- c(toKeepIndex, 1)
+        # stop()
+      }
+      
+    } else {
+      toKeepIndex <- c(toKeepIndex, 1)
+    }
+  }
+  clusterAssingmentTable$idx <- toKeepIndex
+  clusterAssingmentTable <- clusterAssingmentTable %>% filter(toKeepIndex==1) %>% select(-idx)
+  write.table(clusterAssingmentTable, file=paste(outputDir, "clusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  
   save.image(file=paste(outputDir, "PICTograph2.RData", sep="/"))
   
 }
-
 
 estimatePurity <- function(all_set_results, input_data) {
   set_k_choices <- writeSetKTable(all_set_results)
