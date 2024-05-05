@@ -7,6 +7,7 @@
 runMCMCForAllBoxes(
   sep_list,
   sample_presence = FALSE,
+  purity = 0.8,
   ploidy = 2,
   max_K = 5,
   min_mutation_per_cluster = 5,

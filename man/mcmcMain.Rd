@@ -13,6 +13,7 @@ mcmcMain(
   cytoband_file = NULL,
   sample_presence = FALSE,
   dual_model = TRUE,
+  purity = 0.8,
   ploidy = 2,
   pval = 0.05,
   max_K = 5,
