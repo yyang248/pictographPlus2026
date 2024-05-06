@@ -35,7 +35,7 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 1) A single csv file that contains SSM and CNA information
 2) Two csv files, one for SSM and one for CNA
-3) Thress csv files, one for ssm, one for CNA, and one for germline heterozygous single nucleotide variants (SNV)
+3) Three csv files, one for ssm, one for CNA, and one for germline heterozygous single nucleotide variants (SNV)
 
 ### 1. The first option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf". Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele.
 
@@ -58,19 +58,16 @@ head(read.csv(system.file('extdata/examples/example4_cna.csv', package = 'pictog
 head(read.csv(system.file('extdata/examples/example4_SNP.csv', package = 'pictograph2')))
 ```
 
-## Run an automated pipeline of the tool using the function mcmcMain
+## 3. Run an automated pipeline of the tool using the function mcmcMain. The only required user input is the "mutation_file", along with the "copy_number_file" and "SNV_file" if using format 2 or 3 mentioned above. Users can specify the destination of output files using "outputDir" option. 
 
 ```{r input_data}
 mcmcMain(mutation_file,
          copy_number_file=NULL,
-         outputDir=NULL,
          SNV_file=NULL,
-         stat_file=NULL, 
+         outputDir=NULL,
          sample_presence=FALSE,
          dual_model=TRUE,
          purity=0.8,
-         ploidy=2,
-         pval=0.05,
          max_K = 5, 
          min_mutation_per_cluster=5, 
          n.iter=5000, 
