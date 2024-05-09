@@ -12,6 +12,16 @@
 #' @param SNV_file description
 #' @param outputDir description
 #' @param sample_presence description
+#' @param dual_model description
+#' @param score description
+#' @param max_K description
+#' @param min_mutation_per_cluster description
+#' @param n.iter description
+#' @param n.burn de
+#' @param thin description
+#' @param mc.cores description
+#' @param inits description
+#' @param cluster_diff_thresh description
 #' @export
 mcmcMain <- function(mutation_file,
                      copy_number_file=NULL,
@@ -58,10 +68,13 @@ mcmcMain <- function(mutation_file,
   }
   
   # save upset plot
-  data_matrix <- ifelse(data$y[data$is_cn==0,]>0, 1, 0)
-  png(paste(outputDir, "upsetR.png", sep="/"), res=100)
-  print(upset(as.data.frame(data_matrix), text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5), keep.order = T, sets = rev(colnames(data_matrix))))
-  dev.off()
+  if (ncol(data$y) > 1) {
+    data_matrix <- ifelse(data$y[data$is_cn==0,]>0, 1, 0)
+    png(paste(outputDir, "upsetR.png", sep="/"), res=100)
+    print(upset(as.data.frame(data_matrix), text.scale = c(1.5, 1.5, 1.5, 1.5, 1.5, 1.5), keep.order = T, sets = rev(colnames(data_matrix))))
+    dev.off()
+  }
+  
   
   data <- assign("data", data, envir = .GlobalEnv)
   
