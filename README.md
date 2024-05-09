@@ -59,21 +59,21 @@ This will run PICTograph2 and save the output files in 'extdata/examples/output'
 
 | Parameter | Description | type | options |
 | ------------- | ------------- | ------- | ------ |
-| mutation_file | A csv file that include information for SSMs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | Required 
-| copy_number_file | A csv file that include information for CNA. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
-| SNV_file | A csv file that include information for germline heterozygous SNVs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
+| mutation_file | a csv file that include information for SSMs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | Required 
+| copy_number_file | a csv file that include information for CNA. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
+| SNV_file | a csv file that include information for germline heterozygous SNVs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
 | outputDir | output directory for saving all files. default: current directory. | string | default: NULL
 | dual_model | whether to use one model or two separate models. Details can be found in Models section. Applicable if a copy number file is provided. | boolean| default: TRUE
 | sample_presence | whether to use sample presence to separate the mutations. Not applicable if dual_model is set to FALSE and a copy number file is provided. | boolean | default: TRUE
 | score | scoring function to estimate the number of clusters. | string | silhouette or BIC. default: silhouette
 | max_K | user defined maximum number of clusters. | integer | default: 10
-| min_mutation_per_cluster | minumum number of mutations in each cluster | integer | default: 5
-| cluster_diff_thresh | threshold to merge two clusters | float | default: 0.05
-| n.iter | number of iterations by JAGS | integer | default: 5000
-| n.burn | number of burns by JAGS | integer | default: 1000
-| thin | number of thin by JAGS | integer | default: 10
-| inits | additional parameters by JAGS | list | default: list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123)
-| mc.cores | number of cores to use for parallel computing; not applicable to windows | integer | default: 8
+| min_mutation_per_cluster | minumum number of mutations in each cluster. | integer | default: 5
+| cluster_diff_thresh | threshold to merge two clusters. | float | default: 0.05
+| n.iter | number of iterations by JAGS.| integer | default: 5000
+| n.burn | number of burns by JAGS. | integer | default: 1000
+| thin | number of thin by JAGS. | integer | default: 10
+| inits | additional parameters by JAGS. | list | default: list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123)
+| mc.cores | number of cores to use for parallel computing; not applicable to windows. | integer | default: 8
 
 
 ### 4. Output files
@@ -86,7 +86,7 @@ This will run PICTograph2 and save the output files in 'extdata/examples/output'
 | tree.csv | the tree with the highest score; all trees with tied highest score is available under all_trees directory. |
 | subclone_proportion.csv | estimated proportion of each cluster in each sample |
 | purity.csv | estimated purity for each sample, based on the tree structure |
-| tree_ensemble.png | the image of the ensembled tree of all trees with the same highest score  |
+| tree_ensemble.png | the image of the ensemble tree of all trees with the same highest score  |
 | tree.png | the image of a tree with the best score  |
 | upsetR.png | the mutation profiles between samples; only available if number of samples is bigger than 1.|
 | violin.png | a violin plot of the MCF|
