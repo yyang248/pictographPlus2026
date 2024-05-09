@@ -59,31 +59,13 @@ head(read.csv(system.file('extdata/examples/example4_cna.csv', package = 'pictog
 head(read.csv(system.file('extdata/examples/example4_SNP.csv', package = 'pictograph2')))
 ```
 
-## 3. Run an automated pipeline of the tool using the function mcmcMain. The only required user input is the "mutation_file", along with the "copy_number_file" and "SNV_file" if using format 2 or 3 mentioned above. Users can specify the destination of output files using "outputDir" option. 
+## 3. Run an automated pipeline of the tool using the function mcmcMain. The only required user input is the "mutation_file", along with the "copy_number_file" and "SNV_file" if using format 2 or 3 mentioned above. Users can specify the destination of output files using "outputDir" option. If the outputDir is not specified, output files will be stored in the current working directory.
 
 ```{r input_data}
 mcmcMain(mutation_file=system.file('extdata/examples/example1_snv.csv', package = 'pictograph2'),
          copy_number_file=NULL,
          SNV_file=NULL,
-         outputDir=system.file('extdata/examples/output', package = 'pictograph2'),
-         sample_presence=FALSE,
-         dual_model=TRUE,
-         purity=0.8,
-         max_K = 5, 
-         min_mutation_per_cluster=5, 
-         n.iter=5000, 
-         n.burn=1000, 
-         thin=10, 
-         mc.cores=8, 
-         inits=list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123),
-         cluster_diff_thresh=0.05,
-         alt_reads_thresh = 0, 
-         vaf_thresh = 0, 
-         cnv_max_dist=2000, 
-         cnv_max_percent=0.30, 
-         tcn_normal_range=c(1.8, 2.2), 
-         smooth_cnv=F, 
-         autosome=T)
+         outputDir=system.file('extdata/examples/output', package = 'pictograph2'))
 ```
 
 ## 3. Clustering mutations and estimating CCFs
