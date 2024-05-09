@@ -43,11 +43,11 @@ model {
 
 	for (s in 1:S) {
 
-			z.eta[1,s] ~ dcat(c(eta, 1-eta))
+			eta[1,s] ~ dbeta(5,2)
+			z.eta[1,s] ~ dcat(c(eta[1,s], 1-eta[1,s]))
 
-			mcf1[1,s] ~ dbeta(1,1)T(0.05, )
-			mcf[1,s] <- ifelse(z.eta[1,s] == 1, mcf1[1,s]*purity, 0)
+			mcf1[1,s] ~ dbeta(1,1)T(0.05, purity[s])
+			mcf[1,s] <- ifelse(z.eta[1,s] == 1, mcf1[1,s], 0)
 	}
-	
-  eta ~ dbeta(5,2)
+
 }

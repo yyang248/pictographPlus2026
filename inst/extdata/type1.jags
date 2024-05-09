@@ -47,10 +47,11 @@ model {
 	for (k in 1:K) {
 		for (s in 1:S) {
 
-			z.eta[k,s] ~ dcat(c(eta, 1-eta))
+			eta[k,s] ~ dbeta(5,2)
+			z.eta[k,s] ~ dcat(c(eta[k,s], 1-eta[k,s]))
 
-			mcf1[k,s] ~ dbeta(1,1)T(0.05, )
-			mcf_unsorted[k,s] <- ifelse(z.eta[k,s] == 1, mcf1[k,s]*purity, 0)
+			mcf1[k,s] ~ dbeta(1,1)T(0.05, purity[s])
+			mcf_unsorted[k,s] <- ifelse(z.eta[k,s] == 1, mcf1[k,s], 0)
 		}
 	}
 	
@@ -58,5 +59,4 @@ model {
 		mcf[1:K, s] <- ifelse(s == sample_to_sort, sort(mcf_unsorted[1:K, s]), mcf_unsorted[1:K, s])
 	}
 	
-  eta ~ dbeta(5,2)
 }
