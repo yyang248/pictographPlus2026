@@ -27,7 +27,7 @@ mcmcMain <- function(mutation_file,
                      copy_number_file=NULL,
                      SNV_file=NULL,
                      outputDir=NULL,
-                     sample_presence=FALSE,
+                     sample_presence=TRUE,
                      dual_model=TRUE,
                      score="silhouette", # either BIC or silhouette
                      ploidy=2,
