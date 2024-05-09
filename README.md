@@ -153,3 +153,9 @@ This will run PICTograph2 and save the output files in 'extdata/examples/output'
 | mcf.png | the MCF chain trace from JAGS|
 
 ### 5. Models
+
+| type of input | model used | sample presence |
+| --- | --- | --- |
+| single SSM file | second model | optional |
+| SSM file with CNA file (with or without germline SNV file) | first and second model | optional
+ | SSM file with CNA file (with or without germline SNV file) | third model | unavailable
