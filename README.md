@@ -49,15 +49,36 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 Run an automated pipeline of the tool using the function mcmcMain. The only required user input is the "mutation_file", along with the "copy_number_file" and "SNV_file" if using format 2 or 3 mentioned above. Users can specify the destination of output files using "outputDir" option. If the outputDir is not specified, output files will be stored in the current working directory.
 
 ```
-# here we use the example 1 file as a demo
+# here we use the example1 file as a demo
 mcmcMain(mutation_file=system.file('extdata/examples/example1_snv.csv', package = 'pictograph2'), outputDir=system.file('extdata/examples/output', package = 'pictograph2'))
 ```
 
 This will run PICTograph2 and save the output files in 'extdata/examples/output' directory. 
 
-### 3. Output files
+### 3. Parameters
 
-| File name | Explanation |
+| Parameter | Description | type | options |
+| ------------- | ------------- | ------- | ------ |
+| mutation_file | A csv file that include information for SSMs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | Required 
+| copy_number_file | A csv file that include information for CNA. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
+| SNV_file | A csv file that include information for germline heterozygous SNVs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
+| outputDir | output directory for saving all files. default: current directory. | string | default: NULL
+| dual_model | whether to use one model or two separate models. Details can be found in Models section. Applicable if a copy number file is provided. | boolean| default: TRUE
+| sample_presence | whether to use sample presence to separate the mutations. Not applicable if dual_model is set to FALSE and a copy number file is provided. | boolean | default: TRUE
+| score | scoring function to estimate the number of clusters. | string | silhouette or BIC. default: silhouette
+| max_K | user defined maximum number of clusters. | integer | default: 10
+| min_mutation_per_cluster | minumum number of mutations in each cluster | integer | default: 5
+| cluster_diff_thresh | threshold to merge two clusters | float | default: 0.05
+| n.iter | number of iterations by JAGS | integer | default: 5000
+| n.burn | number of burns by JAGS | integer | default: 1000
+| thin | number of thin by JAGS | integer | default: 10
+| inits | additional parameters by JAGS | list | default: list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123)
+| mc.cores | number of cores to use for parallel computing; not applicable to windows | integer | default: 8
+
+
+### 4. Output files
+
+| File name | Description |
 | ------------- | ------------- |
 | mcf.csv | estimated MCF for each cluster in each sample  |
 | clusterAssign.csv | cluster assignment of each SSM/CNA to each cluster  |
@@ -70,3 +91,5 @@ This will run PICTograph2 and save the output files in 'extdata/examples/output'
 | upsetR.png | the mutation profiles between samples; only available if number of samples is bigger than 1.|
 | violin.png | a violin plot of the MCF|
 | mcf.png | the MCF chain trace from JAGS|
+
+### 5. Models
