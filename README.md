@@ -30,7 +30,7 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 * The first option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf". Example input files can be found under "inst/extdata/examples". See files that start with example1.
 
-* SSM file
+* SSM file with minimal information
 
     | sample | mutation | total_reads | alt_reads | tumor_integer_copy_number | cncf |
     | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -40,6 +40,8 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 * Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele. If "major_integer_copy_number" is not provided, it will be estimated using an internal function built in the package. Example input files can be found under "inst/extdata/examples". See files that start with example2.
 
+* SSM file with major_integer_copy_number column
+
     | sample | mutation | total_reads | alt_reads | tumor_integer_copy_number | major_integer_copy_number | cncf |
     | ---- | ---- | ---- | ---- | ---- | ---- | --- |
     | sample1 | mut1 | 100 | 67 | 4 | 3 | 0.8 |
@@ -47,6 +49,8 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
     | sample2 | mut1 | 100 | 50 | 4 | 3| 0.7 |
 
 * Another optional column is "purity" column that provides the information of normal contamination of a sample. Putiry of 0.8 wil be used if not provided. 
+
+* SSM file with major_integer_copy number and purity columns
 
     | sample | mutation | total_reads | alt_reads | tumor_integer_copy_number | major_integer_copy_number | cncf | purity |
     | ---- | ---- | ---- | ---- | ---- | ---- | --- | --- |
@@ -58,11 +62,15 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 * The second option is to provide the SSM read counts and copy number alterations (CNA) in two separate files. In this case, the SSM file should contain columns "sample", "mutation", "total_reads", "alt_reads", "chrom", "start", and "end". The "purity" column with be optional. The CNA file should contain columns "sample", "chrom", "start", "end", "tcn" and "baf". See files that start with example3.
 
+* SSM file
+
     | sample | mutation | total_reads | alt_reads | chrom | start | end |
     | ---- | ---- | ---- | ---- | ---- | ---- | --- |
     | sample1 | mut1 | 100 | 67 | chr1 | 10 | 1000 |
     | sample1 | mut2 | 50 | 67 | chr2 | 2000| 3000 |
     | sample2 | mut1 | 100 | 50 | chr1 | 10 | 1000 |
+
+* CNA file with baf column
 
     | sample | chrom | start | end | tcn | baf |
     | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -74,17 +82,22 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 * In the absence of the baf column, users should provide an additional file that contains the count of the heterozygous germline SNVs that has the information about the "chroms", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. Note: the sample name should matched the sample name used in the SSM and CNA file. See files that start with example4.
 
+* SSM file
+
     | sample | mutation | total_reads | alt_reads | chrom | start | end |
     | ---- | ---- | ---- | ---- | ---- | ---- | --- |
     | sample1 | mut1 | 100 | 67 | chr1 | 10 | 1000 |
     | sample1 | mut2 | 50 | 67 | chr2 | 2000| 3000 |
     | sample2 | mut1 | 100 | 50 | chr1 | 10 | 1000 |
 
+* CNA file
     | sample | chrom | start | end | tcn | 
     | ---- | ---- | ---- | ---- | ---- |
     | sample1 | chr1 | 10 | 1000 | 3.6 |
     | sample1 | chr2 | 2000| 3000 | 3.4 |
     | sample2 | chr1 | 10 | 1000 | 3.6 |
+
+* SNV file of germline heterozygous SNVs
 
     | chroms | position | ref | alt | germline_ref | germline_alt | sample1_ref | sample1_alt | sample2_ref | sample2_alt |
     | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
