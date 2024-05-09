@@ -12,8 +12,9 @@ calculateTreeScoreMutations(
   multiplicityTable,
   clusterAssingmentTable,
   purity,
-  all_spanning_trees,
-  restriction.val = 1
+  trees,
+  restriction.val = 1,
+  mc.cores = 8
 )
 }
 \description{
