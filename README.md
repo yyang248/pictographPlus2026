@@ -28,7 +28,7 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 1) A single csv file that contains SSM and CNA information
 
-* The first option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf". Example input files can be found under "inst/extdata/examples". See files that starts with example1.
+* The first option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf". Example input files can be found under "inst/extdata/examples". See files that start with example1.
 
     | sample | mutation | total_reads | alt_reads | tumor_integer_copy_number | cncf |
     | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -36,7 +36,7 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
     | sample1 | mut2 | 100 | 67 | 4 | 0.8 |
     | sample2 | mut1 | 100 | 40 | 2 | 1 |
 
-* Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele. If "major_integer_copy_number" is not provided, it will be estimated using an internal function built in the package. Example input files can be found under "inst/extdata/examples". See files that starts with example2.
+* Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele. If "major_integer_copy_number" is not provided, it will be estimated using an internal function built in the package. Example input files can be found under "inst/extdata/examples". See files that start with example2.
 
     | sample | mutation | total_reads | alt_reads | tumor_integer_copy_number | major_integer_copy_number | cncf |
     | ---- | ---- | ---- | ---- | ---- | ---- | --- |
@@ -54,7 +54,7 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 2) Two csv files, one for SSM and one for CNA
 
-* The second option is to provide the SSM read counts and copy number alterations (CNA) in two separate files. In this case, the SSM file should contain columns "sample", "mutation", "total_reads", "alt_reads", "chrom", "start", and "end". The "purity" column with be optional. The CNA file should contain columns "sample", "chrom", "start", "end", "tcn" and "baf". See files that starts with example3.
+* The second option is to provide the SSM read counts and copy number alterations (CNA) in two separate files. In this case, the SSM file should contain columns "sample", "mutation", "total_reads", "alt_reads", "chrom", "start", and "end". The "purity" column with be optional. The CNA file should contain columns "sample", "chrom", "start", "end", "tcn" and "baf". See files that start with example3.
 
     | sample | mutation | total_reads | alt_reads | chrom | start | end |
     | ---- | ---- | ---- | ---- | ---- | ---- | --- |
@@ -62,7 +62,7 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
     | sample1 | mut2 | 50 | 67 | chr2 | 2000| 3000 |
     | sample2 | mut1 | 100 | 50 | chr1 | 10 | 1000 |
 
-    | sample | chrom | start | end | tcn | baf
+    | sample | chrom | start | end | tcn | baf |
     | ---- | ---- | ---- | ---- | ---- | ---- |
     | sample1 | chr1 | 10 | 1000 | 3.6 | 0.3 |
     | sample1 | chr2 | 2000| 3000 | 3.4 | 0.3 |
@@ -70,7 +70,24 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 
 3) Three csv files, one for ssm, one for CNA, and one for germline heterozygous single nucleotide variants (SNV)
 
-* In the absence of the baf column, users should provide an additional file that contains the count of the heterozygous germline SNVs that has the information about the "chroms", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. Note: the sample name should matched the sample name used in the SSM and CNA file. See files that starts with example4.
+* In the absence of the baf column, users should provide an additional file that contains the count of the heterozygous germline SNVs that has the information about the "chroms", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. Note: the sample name should matched the sample name used in the SSM and CNA file. See files that start with example4.
+
+    | sample | mutation | total_reads | alt_reads | chrom | start | end |
+    | ---- | ---- | ---- | ---- | ---- | ---- | --- |
+    | sample1 | mut1 | 100 | 67 | chr1 | 10 | 1000 |
+    | sample1 | mut2 | 50 | 67 | chr2 | 2000| 3000 |
+    | sample2 | mut1 | 100 | 50 | chr1 | 10 | 1000 |
+
+    | sample | chrom | start | end | tcn | 
+    | ---- | ---- | ---- | ---- | ---- |
+    | sample1 | chr1 | 10 | 1000 | 3.6 |
+    | sample1 | chr2 | 2000| 3000 | 3.4 |
+    | sample2 | chr1 | 10 | 1000 | 3.6 |
+
+    | chroms | position | ref | alt | germline_ref | germline_alt | sample1_ref | sample1_alt | sample2_ref | sample2_alt |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | chr1 | 20 | A | C | 50 | 50 | 70 | 30 | 60 | 40 |
+    | chr1 | 50 | G | T | 55 | 45 | 76 | 34 | 80 | 20 |
 
 ### 2. Run PICTograph2 using the main function
 
