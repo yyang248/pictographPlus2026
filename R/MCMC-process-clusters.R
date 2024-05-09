@@ -104,8 +104,6 @@ writeMultiplicityTable <- function(m_chain, Mut_ID = NULL) {
     mutate(Mut_ID = Mut_ID, Multiplicity = value)%>%
     select(Mut_ID, Multiplicity)
   
-  # map_m <- map_m %>%
-  #   arrange(Multiplicity)
   return(map_m)
 }
 
