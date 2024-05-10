@@ -123,8 +123,7 @@ This will run PICTograph2 and save the output files in 'extdata/examples/output'
 | copy_number_file | a csv file that include information for CNA. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
 | SNV_file | a csv file that include information for germline heterozygous SNVs. Details explained in the Input data section. See inst/extdata/examples for an example. | string | default: NULL
 | outputDir | output directory for saving all files. default: current directory. | string | default: NULL
-| dual_model | whether to use one model or two separate models. Details can be found in Models section. Applicable if a copy number file is provided. | boolean| default: TRUE
-| sample_presence | whether to use sample presence to separate the mutations. Not applicable if dual_model is set to FALSE and a copy number file is provided. | boolean | default: TRUE
+| sample_presence | whether to use sample presence to separate the mutations. | boolean | default: TRUE
 | score | scoring function to estimate the number of clusters. | string | silhouette or BIC. default: silhouette
 | max_K | user defined maximum number of clusters. | integer | default: 10
 | min_mutation_per_cluster | minumum number of mutations in each cluster. | integer | default: 5
@@ -153,6 +152,54 @@ This will run PICTograph2 and save the output files in 'extdata/examples/output'
 | mcf.png | the MCF chain trace from JAGS|
 
 ### 5. Models
+
+Two JAGS models are implemented within the package. Let's first go over the notations.
+
+#### Model variables
+
+* $I$ : number of mutations (SSMs and CNAs, if applicable)
+* $S$ : number of samples
+* $y$: variant read counts
+* $n$: total read counts
+* $tcn$: (fractional) total copy number
+* $icn$: integer copy number
+* $M$: major allele copy number
+* $cncf$: copy number cellular fraction
+* $m$: multiplicity for mutation
+* $h$: indicator of whether a mutation is a CNA; $h_i = 1$ if mutation $i$ is a copy number alteration varaint (i.e. from the copy number file)
+* $K$ : latent number of clusters
+* $Z$ : latent cluster assignment of mutations
+* $mcf$: cluster mutation cellular fraction
+
+#### Model 1: estimates $icn$, $m$, and $cncf$ using SSMs in copy-neutral region and CNAs
+
+
+
+[ $tcn_i$ | $mcf_{ZS}, icn_i$ ] = dnorm ( $icn_i$ * $mcf_{ZS}$ + 2 * (1 - $mcf_{ZS}$), &epsilon;)
+
+&epsilon; ~ Norm(0,1)
+
+[ $m_i$ | $h_i=1, icn_i, m2_i$ ] = &lambda;$_i$ * $m2_i$ + (1 - &lambda;$_i$) * ($icn_i$ - $m2_i$)
+
+&lambda;$_i$ ~ Binomial(0.5,1)
+
+[ $m2_i$ | $h_i=1, icn_i, m1_i$ ] = min($m1_i, icn_i$)
+
+[ $m1_i$ | $h_i=1, icn_i ] ~ poisson(1)
+
+[ $m_i$ | $h_i=0$ ] = 1
+
+[ $icn_i$ | $h_i = 0$ ] = 2, [ $icn_i$ | $h_i = 1$ ] ~ poisson(2)
+
+[ $Z_i$ | &pi;$_1$,...&pi;$_K$ ] ~ Multinomial(&pi;$_1$,...&pi;$_K$)
+
+&pi;$_1$,...&pi;$_K$ ~ Dirichlet($1_1$,...,$1_K$)
+
+[ $mcf_{KS}$ | &eta; ] ~ &eta;Beta(1,1) + (1-&eta;)x0
+
+&eta; ~ Beta(5,2)
+
+
 
 | type of input | model used | sample presence |
 | --- | --- | --- |
