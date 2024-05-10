@@ -10,7 +10,7 @@ runMCMCForAllBoxes <- function(sep_list,
                                n.burn = 1000, 
                                thin = 10,
                                mc.cores = 4, 
-                               model_type = "type3", 
+                               model_type = "type2", 
                                inits = list(".RNG.name" = "base::Wichmann-Hill",
                                             ".RNG.seed" = 123)){
   
@@ -81,7 +81,7 @@ runMutSetMCMC <- function(temp_box,
                           inits = list(".RNG.name" = "base::Wichmann-Hill",
                                        ".RNG.seed" = 123),
                           temp_max_K = 5,
-                          model_type = "type1",
+                          model_type = "type2",
                           params = c("z", "mcf", "icn", "m", "ystar"),
                           min_mutation_per_cluster = 1,
                           cluster_diff_thresh=0.05,
@@ -165,7 +165,7 @@ runMCMCForABox <- function(box,
                                         ".RNG.seed" = 123),
                            params = c("z", "mcf", "icn", "m", "ystar"),
                            max_K = 5, 
-                           model_type = "type1",
+                           model_type = "type2",
                            sample_presence=FALSE) {
 
   # select columns if the presence pattern is 1
