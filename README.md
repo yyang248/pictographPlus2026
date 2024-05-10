@@ -173,12 +173,14 @@ Two JAGS models are implemented within the package. Let's first go over the nota
 
 #### Model 1: estimates $icn$, $m$, and $cncf$ using SSMs in copy-neutral region and CNAs
 
-![The first model of Bayesian Hierarchical Model](inst/extdata/model1.png "Model 1 Diagram")
+<img src="inst/extdata/model1.png" alt="The first model of Bayesian Hierarchical Model" title="Model 1 Diagram" width="75%">
 
-<img src="inst/extdata/model1.png" alt="" title="Bayesian Model Diagram" width="50%">
+
+#### Model 2: use the  $icn$, $m$, and $cncf$ estimated from model 1 and estimate all parameters in all mutations
+
+<img src="inst/extdata/model2.png" alt="The second model of Bayesian Hierarchical Model" title="Model 2 Diagram" width="75%">
 
 | type of input | model used | sample presence |
 | --- | --- | --- |
 | single SSM file | second model | optional |
 | SSM file with CNA file (with or without germline SNV file) | first and second model | optional
- | SSM file with CNA file (with or without germline SNV file) | third model | unavailable
