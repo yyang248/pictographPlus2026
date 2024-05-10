@@ -173,7 +173,7 @@ Two JAGS models are implemented within the package. Let's first go over the nota
 
 #### Model 1: estimates $icn$, $m$, and $cncf$ using SSMs in copy-neutral region and CNAs
 
-
+![Diagram of Bayesian Hierarchical Model](inst/extdata/model1.png "Bayesian Model Diagram")
 
 [ $tcn_i$ | $mcf_{ZS}, icn_i$ ] = dnorm ( $icn_i$ * $mcf_{ZS}$ + 2 * (1 - $mcf_{ZS}$), &epsilon;)
 
