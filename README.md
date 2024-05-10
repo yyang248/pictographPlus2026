@@ -180,6 +180,9 @@ Two JAGS models are implemented within the package. Let's first go over the nota
 
 <img src="inst/extdata/model2.png" alt="The second model of Bayesian Hierarchical Model" title="Model 2 Diagram" width="75%">
 
+
+#### If only a single SSM file is provided as input, model 2 will be used
+
 | type of input | model used | sample presence |
 | --- | --- | --- |
 | single SSM file | second model | optional |
