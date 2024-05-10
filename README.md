@@ -173,33 +173,9 @@ Two JAGS models are implemented within the package. Let's first go over the nota
 
 #### Model 1: estimates $icn$, $m$, and $cncf$ using SSMs in copy-neutral region and CNAs
 
-![Diagram of Bayesian Hierarchical Model](inst/extdata/model1.png "Bayesian Model Diagram")
+![The first model of Bayesian Hierarchical Model](inst/extdata/model1.png "Model 1 Diagram")
 
-[ $tcn_i$ | $mcf_{ZS}, icn_i$ ] = dnorm ( $icn_i$ * $mcf_{ZS}$ + 2 * (1 - $mcf_{ZS}$), &epsilon;)
-
-&epsilon; ~ Norm(0,1)
-
-[ $m_i$ | $h_i=1, icn_i, m2_i$ ] = &lambda;$_i$ * $m2_i$ + (1 - &lambda;$_i$) * ($icn_i$ - $m2_i$)
-
-&lambda;$_i$ ~ Binomial(0.5,1)
-
-[ $m2_i$ | $h_i=1, icn_i, m1_i$ ] = min($m1_i, icn_i$)
-
-[ $m1_i$ | $h_i=1, icn_i ] ~ poisson(1)
-
-[ $m_i$ | $h_i=0$ ] = 1
-
-[ $icn_i$ | $h_i = 0$ ] = 2, [ $icn_i$ | $h_i = 1$ ] ~ poisson(2)
-
-[ $Z_i$ | &pi;$_1$,...&pi;$_K$ ] ~ Multinomial(&pi;$_1$,...&pi;$_K$)
-
-\( &pi;$_{1}$,...&pi;$_K$ ~ Dirichlet($1_1$,...,$1_K$) \)
-
-[ $mcf_{KS}$ | &eta; ] ~ &eta;Beta(1,1) + (1-&eta;)x0
-
-&eta; ~ Beta(5,2)
-
-
+<img src="inst/extdata/model1.png" alt="" title="Bayesian Model Diagram" width="50%">
 
 | type of input | model used | sample presence |
 | --- | --- | --- |
