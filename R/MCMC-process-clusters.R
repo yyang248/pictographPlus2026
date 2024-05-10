@@ -104,12 +104,10 @@ writeMultiplicityTable <- function(m_chain, Mut_ID = NULL) {
     mutate(Mut_ID = Mut_ID, Multiplicity = value)%>%
     select(Mut_ID, Multiplicity)
   
-  # map_m <- map_m %>%
-  #   arrange(Multiplicity)
   return(map_m)
 }
 
-#' Determine the most probable cluster CCF values by taking the mode of the posterior distributions
+#' Determine the most probable cluster MCF values by taking the mean of the posterior distributions
 #' 
 #' @export
 #' @param mcf_chain MCMC chain of CCF values, which is the first item in the list returned by \code{clusterSep}
@@ -117,22 +115,32 @@ writeMultiplicityTable <- function(m_chain, Mut_ID = NULL) {
 estimateMCFs <- function(mcf_chain) {
   S <- numberSamples(mcf_chain)
   K <- numberClusters(mcf_chain)
-  # density plot 
-  mcf.dens <- ggplot(mcf_chain, aes(x = value)) +
-    geom_density() +
-    facet_wrap(~Parameter, ncol = S, scales = "free_y") +
-    theme_light()
-  # find peak for MAP mcf
-  mcf.dens.p <- ggplot_build(mcf.dens)$data[[1]]
-  mcf.map <- mcf.dens.p %>%
-    as_tibble() %>%
-    group_by(PANEL) %>%
-    reframe(value = x[max(y) == y])
-  mcf.map <- mcf.map %>%
-    mutate(Parameter = unique(mcf_chain$Parameter),
-           value_rounded = round(value, 2))
-  # return mcf matrix
-  mcf.map.matrix <- matrix(mcf.map$value_rounded, K, S, byrow=TRUE)
+  # # density plot 
+  # mcf.dens <- ggplot(mcf_chain, aes(x = value)) +
+  #   geom_density() +
+  #   facet_wrap(~Parameter, ncol = S, scales = "free_y") +
+  #   theme_light()
+  # # find peak for MAP mcf
+  # mcf.dens.p <- ggplot_build(mcf.dens)$data[[1]]
+  # mcf.map <- mcf.dens.p %>%
+  #   as_tibble() %>%
+  #   group_by(PANEL) %>%
+  #   reframe(value = x[max(y) == y])
+  # mcf.map <- mcf.map %>%
+  #   mutate(Parameter = unique(mcf_chain$Parameter),
+  #          value_rounded = round(value, 3))
+  # # return mcf matrix
+  # mcf.map.matrix <- matrix(mcf.map$value_rounded, K, S, byrow=TRUE)
+  temp <- mcf_chain %>% 
+    mutate(
+      I = as.numeric(gsub("mcf\\[([0-9]+),[0-9]+\\]", "\\1", Parameter)),
+      J = as.numeric(gsub("mcf\\[[0-9]+,([0-9]+)\\]", "\\1", Parameter))) %>% 
+    group_by(I,J) %>% 
+    summarise(mean_value = mean(value), .groups = 'drop')
+  mcf.map.matrix <- matrix(NA, nrow = K, ncol = S, dimnames = list(1:K, 1:S))
+  for(row in 1:nrow(temp)) {
+    mcf.map.matrix[temp$I[row], temp$J[row]] <- round(temp$mean_value[row],3)
+  }
   return(mcf.map.matrix)
 }
 
@@ -241,8 +249,8 @@ writeClusterAssignmentsTable <- function(z_chain, mcf_chain=NULL, cncf=NULL, Mut
     }
   }
   
-  map_z <- map_z %>%
-    arrange(Cluster)
+  # map_z <- map_z %>%
+  #   arrange(Cluster)
   return(map_z)
 }
 

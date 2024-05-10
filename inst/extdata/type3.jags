@@ -59,13 +59,12 @@ model {
 	
 	for (k in 1:K) {
 		for (s in 1:S) {
+  
+			eta[k,s] ~ dbeta(5,2)
+			z.eta[k,s] ~ dcat(c(eta[k,s], 1-eta[k,s]))
 
-			z.eta[k,s] ~ dcat(c(eta, 1-eta))
-
-			mcf1[k,s] ~ dbeta(1,1)T(0.05, )
+			mcf1[k,s] ~ dbeta(1,1)T(0.05, purity[s])
 			mcf_unsorted[k,s] <- ifelse(z.eta[k,s] == 1, mcf1[k,s], 0)
 		}
 	}
-	
-  eta ~ dbeta(5,2)
 }

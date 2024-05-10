@@ -51,7 +51,8 @@ separateMutationsBySamplePresence <- function(input_data) {
                                  cncf = input_data$cncf[type_indices[[types[t]]], ,drop=FALSE],
                                  mtp = input_data$mtp[type_indices[[types[t]]]],
                                  icn = input_data$icn[type_indices[[types[t]]]],
-                                 MutID = input_data$MutID[type_indices[[types[t]]]])
+                                 MutID = input_data$MutID[type_indices[[types[t]]]],
+                                 purity = input_data$purity)
     # if (ncol(input_data$y) == 1) {
     #   break
     # }

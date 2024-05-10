@@ -4,10 +4,9 @@
 #' @param copy_number_file copy number file that contains columns "sample", "chrom", "start", "end", "tcn"
 importFiles <- function(mutation_file, 
                         copy_number_file=NULL, 
-                        outputDir=NULL, 
                         SNV_file=NULL, 
+                        outputDir=NULL,
                         stat_file=NULL, 
-                        cytoband_file=NULL, 
                         alt_reads_thresh = 0, 
                         vaf_thresh = 0, 
                         cnv_max_dist=2000, 
@@ -214,7 +213,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, sta
     rownames(baf) = rowname
     colnames(baf) = colname
     
-    tcn_tot <- matrix(200, nrow(output_data),ncol(output_data))
+    tcn_tot <- matrix(200, nrow(output_data), ncol(output_data))
     rownames(tcn_tot) <- rownames(output_data)
     colnames(tcn_tot) <- colnames(output_data)
     
@@ -299,7 +298,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, sta
 add_missing_column <- function(name_order, output_data, val) {
   matches <- name_order %in% colnames(output_data)
   sorted_matrix <- output_data[, colnames(output_data) %in% name_order, drop = FALSE]
-  sorted_matrix <- sorted_matrix[, match(name_order[matches], colnames(output_data))]
+  sorted_matrix <- sorted_matrix[, match(name_order[matches], colnames(output_data)), drop = FALSE]
   non_matches <- name_order[!matches]
   if (length(non_matches) > 0) {
     zero_cols <- matrix(val, nrow = nrow(output_data), ncol = length(non_matches))
@@ -630,23 +629,6 @@ check_LOH <- function(output_data, outputDir, SNV_file, tcn_normal_range=c(1.8, 
   return(to_keep_index)
 }
 
-#' #' get copy number cytoband and genes information
-#' importCopyNumberInfo <- function(copy_number_file) {
-#'   drivers = c()
-#'   genes = c()
-#'   cytoband = c()
-#'   
-#'   data <- read_csv(copy_number_file, show_col_types = FALSE)
-#'   data$CNA = paste(data$chrom, data$start, data$end, sep = '-')
-#'   
-#'   for (i in 1:nrow(data)) {
-#'     cytoband[data[i,]$CNA] <- data[i,]$cytoband
-#'     genes[data[i,]$CNA] <- data[i,]$genes
-#'     drivers[data[i,]$CNA] <- data[i,]$drivers
-#'   }
-#'   return(list(cytoband=cytoband, drivers=drivers, genes=genes))
-#' }
-
 #' import mutation file
 importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0) {
   data <- read_csv(mutation_file, show_col_types = FALSE)
@@ -673,6 +655,20 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
   rownames(output_data$n) = rowname
   colnames(output_data$n) = colname
 
+  if ("purity" %in% colnames(data)) {
+    output_data$purity <- as.matrix(data[c("mutation", "sample", "purity")] %>% pivot_wider(names_from = sample, values_from = purity, values_fill = 0))
+    rownames(output_data$purity) <- output_data$purity[,'mutation']
+    output_data$purity <- output_data$purity[,-1, drop=FALSE]
+    rowname = rownames(output_data$purity)
+    colname = colnames(output_data$purity)
+    output_data$purity <- matrix(as.numeric(output_data$purity), ncol = ncol(output_data$purity))
+    rownames(output_data$purity) = rowname
+    colnames(output_data$purity) = colname
+    output_data$purity = colSums(output_data$purity) / colSums(!!output_data$purity)
+  } else {
+    output_data$purity = rep(0.8, ncol(output_data$y))
+  }
+  
   if (any((output_data$y - output_data$n) > 0)) {
     warning("Total read count must be equal or bigger than alt read count. Please check input data before proceeding!")
     stop()
@@ -734,16 +730,17 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   
   output_data$icn <- as.matrix(data[c("mutation", "sample", "tumor_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = tumor_integer_copy_number, values_fill = 2))
   rownames(output_data$icn) <- output_data$icn[,'mutation']
-  output_data$icn <- as.numeric(output_data$icn[,-1])
+  output_data$icn <- as.numeric(output_data$icn[,2])
   # rowname = rownames(output_data$icn)
   # colname = colnames(output_data$icn)
   # output_data$icn <- matrix(as.numeric(output_data$icn), ncol = ncol(output_data$icn))
   # rownames(output_data$icn) = rowname
   # colnames(output_data$icn) = colname
   
-  output_data$mtp <- as.matrix(data[c("mutation", "sample", "major_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = major_integer_copy_number, values_fill = 1))
-  rownames(output_data$mtp) <- output_data$mtp[,'mutation']
-  output_data$mtp <- as.numeric(output_data$mtp[,-1])
+
+  
+  # output_data$mtp <- estimateMultiplicityMatrix(output_data)[,1]
+  
   # rowname = rownames(output_data$mtp)
   # colname = colnames(output_data$mtp)
   # output_data$mtp <- matrix(as.numeric(output_data$mtp), ncol = ncol(output_data$mtp))
@@ -764,6 +761,28 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   
   output_data$tcn = output_data$icn * output_data$cncf + 2 * ( 1 - output_data$cncf)
   
+  if ("major_integer_copy_number" %in% colnames(data)) {
+    output_data$mtp <- as.matrix(data[c("mutation", "sample", "major_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = major_integer_copy_number, values_fill = 1))
+    rownames(output_data$mtp) <- output_data$mtp[,'mutation']
+    output_data$mtp <- as.numeric(output_data$mtp[,2])
+  } else {
+    output_data$mtp <- estimateMultiplicityMatrix(output_data)[,1]
+  }
+  
+  if ("purity" %in% colnames(data)) {
+    output_data$purity <- as.matrix(data[c("mutation", "sample", "purity")] %>% pivot_wider(names_from = sample, values_from = purity, values_fill = 0))
+    rownames(output_data$purity) <- output_data$purity[,'mutation']
+    output_data$purity <- output_data$purity[,-1, drop=FALSE]
+    rowname = rownames(output_data$purity)
+    colname = colnames(output_data$purity)
+    output_data$purity <- matrix(as.numeric(output_data$purity), ncol = ncol(output_data$purity))
+    rownames(output_data$purity) = rowname
+    colnames(output_data$purity) = colname
+    output_data$purity = colSums(output_data$purity) / colSums(!!output_data$purity)
+  } else {
+    output_data$purity = rep(0.8, ncol(output_data$y))
+  }
+  
   # mutation_position = unique(data[c("mutation", "chrom", "start", "end")])
   # if (!all(sort(unique(data[c("mutation", "chrom", "start", "end")]) %>% pull(mutation)) == sort(output_data$MutID))) {
   #   warning("Some mutations may have duplicated chromosome information; keeping the first occurence.")
@@ -771,6 +790,7 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   # }
   # 
   # output_data$position = mutation_position
+  
   
   return(output_data)
 }

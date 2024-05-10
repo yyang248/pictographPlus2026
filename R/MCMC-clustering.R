@@ -35,7 +35,8 @@ runMCMCForAllBoxes <- function(sep_list,
                                      model_type = model_type,
                                      params = params,
                                      min_mutation_per_cluster = min_mutation_per_cluster, 
-                                     cluster_diff_thresh = cluster_diff_thresh)
+                                     cluster_diff_thresh = cluster_diff_thresh,
+                                     sample_presence=sample_presence)
     
     all_set_results[[1]] <- temp_samps_list
     
@@ -62,7 +63,8 @@ runMCMCForAllBoxes <- function(sep_list,
                                        model_type = model_type,
                                        params = params,
                                        min_mutation_per_cluster = min_mutation_per_cluster, 
-                                       cluster_diff_thresh = cluster_diff_thresh)
+                                       cluster_diff_thresh = cluster_diff_thresh,
+                                       sample_presence=sample_presence)
       
       all_set_results[[i]] <- temp_samps_list
     }
@@ -82,7 +84,8 @@ runMutSetMCMC <- function(temp_box,
                           model_type = "type1",
                           params = c("z", "mcf", "icn", "m", "ystar"),
                           min_mutation_per_cluster = 1,
-                          cluster_diff_thresh=0.05) {
+                          cluster_diff_thresh=0.05,
+                          sample_presence=FALSE) {
   # warning("beta prior not used or updated in runMCMC")
   # Run MCMC
 
@@ -96,7 +99,8 @@ runMutSetMCMC <- function(temp_box,
                                     inits = inits,
                                     params = params,
                                     max_K = temp_max_K,
-                                    model_type = model_type)
+                                    model_type = model_type,
+                                    sample_presence=sample_presence)
   
   # Format chains
   if (length(temp_samps_list) == 1) {
@@ -116,22 +120,36 @@ runMutSetMCMC <- function(temp_box,
   K_tested <- seq_len(length(filtered_samps_list))
   if (temp_max_K > 1) {
     box_indata <- getBoxInputData(temp_box, ploidy, model_type)
+    
     bic_vec <- unname(unlist(parallel::mclapply(filtered_samps_list,
-                                                function(chains) calcChainBIC(chains=chains, input.data=box_indata, pattern=temp_box$pattern, model_type),
-                                                mc.cores = 2)))
+                                                  function(chains) calcChainBIC(chains=chains, input.data=box_indata, pattern=temp_box$pattern, model_type),
+                                                  mc.cores = mc.cores)))
     bic_tb <- tibble(K_tested = K_tested,
                      BIC = bic_vec)
-    best_chains <- samps_list[[which.min(bic_vec)]]
+    BIC_best_chains <- samps_list[[which.min(bic_vec)]]
+    sc_vec <- unname(unlist(parallel::mclapply(filtered_samps_list,
+                                                function(chains) calcChainSilhouette(chains=chains, input.data=box_indata, pattern=temp_box$pattern, model_type),
+                                                mc.cores = mc.cores)))
+    
+    sc_tb <- tibble(K_tested = K_tested,
+                     silhouette = sc_vec)
+    sc_best_chains <- samps_list[[which.max(sc_vec)]]
     res_list <- list(all_chains = samps_list,
+                     silhouette = sc_tb,
                      BIC = bic_tb,
-                     best_chains = best_chains,
-                     best_K = which.min(bic_vec))
+                     BIC_best_chains = BIC_best_chains,
+                     sc_best_chains = sc_best_chains,
+                     BIC_best_K = which.min(bic_vec),
+                     silhouette_best_K = which.max(sc_vec))
   } else {
     # only 1 variant, so must be 1 cluster and don't need to check BIC
     res_list <- list(all_chains = filtered_samps_list,
+                     silhouette = NA,
                      BIC = NA,
-                     best_chains = filtered_samps_list[[1]],
-                     best_K = 1)
+                     BIC_best_chains = filtered_samps_list[[1]],
+                     sc_best_chains = filtered_samps_list[[1]],
+                     BIC_best_K = 1,
+                     silhouette_best_K = 1)
   }
   # res_list <- list(all_chains = filtered_samps_list)
   return(res_list)
@@ -147,7 +165,8 @@ runMCMCForABox <- function(box,
                                         ".RNG.seed" = 123),
                            params = c("z", "mcf", "icn", "m", "ystar"),
                            max_K = 5, 
-                           model_type = "type1") {
+                           model_type = "type1",
+                           sample_presence=FALSE) {
 
   # select columns if the presence pattern is 1
   # box <- temp_box
@@ -187,7 +206,7 @@ runMCMCForABox <- function(box,
     colnames(samps_K1[[1]])[which(colnames(samps_K1[[1]]) == "mcf")] <- "mcf[1,1]"
   }
   
-  if (model_type != "type3") {
+  if (sample_presence) {
     samps_K1 <- reverseDrop(samps_K1, box$pattern, n.iter)
   }
 
@@ -202,7 +221,7 @@ runMCMCForABox <- function(box,
                                                       n.burn=n.burn),
                                   mc.cores=mc.cores)
     
-    if (model_type != "type3") {
+    if (sample_presence) {
       for (i in seq_len(length(samps_2))) {
         samps_2[[i]] <- reverseDrop(samps_2[[i]], box$pattern, n.iter)
       }
@@ -236,6 +255,7 @@ getBoxInputData <- function(box, ploidy=2, model_type) {
                            n = box$n[,sample_list,drop=FALSE],
                            tcn = box$tcn[,sample_list,drop=FALSE],
                            is_cn = box$is_cn,
+                           purity=box$purity,
                            ploidy=ploidy)
   } else if (model_type == "type2") {
     box_input_data <- list(I = nrow(box$y),
@@ -247,6 +267,7 @@ getBoxInputData <- function(box, ploidy=2, model_type) {
                            mtp = box$mtp,
                            cncf = box$cncf[,sample_list,drop=FALSE],
                            icn = box$icn,
+                           purity=box$purity,
                            ploidy=ploidy)
   } else if (model_type == "type3") {
     box_input_data <- list(I = nrow(box$y),
@@ -256,6 +277,7 @@ getBoxInputData <- function(box, ploidy=2, model_type) {
                            tcn = box$tcn[,sample_list,drop=FALSE],
                            is_cn = box$is_cn,
                            q = box$q,
+                           purity=box$purity,
                            ploidy=ploidy)
   }
   
