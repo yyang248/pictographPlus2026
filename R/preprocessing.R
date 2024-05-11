@@ -206,6 +206,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
     tcn_tot <- add_missing_column(name_order, tcn_tot, 200)
     
     tcn_alt <- matrix(round(tcn_tot * baf), nrow(output_data),ncol(output_data))
+    tcn_alt <- pmax(tcn_alt, tcn_tot - tcn_alt)
     rownames(tcn_alt) <- rownames(output_data)
     colnames(tcn_alt) <- colnames(output_data)
     
@@ -454,9 +455,17 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   
   output_data$icn <- as.matrix(data[c("mutation", "sample", "tumor_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = tumor_integer_copy_number, values_fill = 2))
   rownames(output_data$icn) <- output_data$icn[,'mutation']
-  output_data$icn <- as.numeric(output_data$icn[,2])
-  
-  output_data$cncf <- as.matrix(data[c("mutation", "sample", "cncf")] %>% pivot_wider(names_from = sample, values_from = cncf, values_fill = 1))
+  output_data$icn <- output_data$icn[,2:ncol(output_data$icn)]
+  output_data$icn <- matrix(as.numeric(output_data$icn), ncol=ncol(output_data$y))
+  output_data$icn <- apply(output_data$icn, 1, function(x) {
+    if (all(x == 2)) {
+      return(2)
+    } else {
+      return(mean(x[x != 2]))
+    }
+  })
+
+  output_data$cncf <- as.matrix(data[c("mutation", "sample", "cncf")] %>% pivot_wider(names_from = sample, values_from = cncf, values_fill = 0))
   rownames(output_data$cncf) <- output_data$cncf[,'mutation']
   output_data$cncf <- output_data$cncf[,-1,drop=FALSE]
   rowname = rownames(output_data$cncf)
@@ -473,7 +482,15 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   if ("major_integer_copy_number" %in% colnames(data)) {
     output_data$mtp <- as.matrix(data[c("mutation", "sample", "major_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = major_integer_copy_number, values_fill = 1))
     rownames(output_data$mtp) <- output_data$mtp[,'mutation']
-    output_data$mtp <- as.numeric(output_data$mtp[,2])
+    output_data$mtp <- output_data$mtp[,2:ncol(output_data$mtp)]
+    output_data$mtp <- matrix(as.numeric(output_data$mtp), ncol=ncol(output_data$y))
+    output_data$mtp <- apply(output_data$mtp, 1, function(x) {
+      if (all(x == 1)) {
+        return(1)
+      } else {
+        return(mean(x[x != 1]))
+      }
+    })
   } else {
     output_data$mtp <- estimateMultiplicityMatrix(output_data)[,1]
   }
