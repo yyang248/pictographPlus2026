@@ -118,6 +118,7 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
   indexList = seq_len(nrow(data))
   
   for (i in seq_len(nrow(data))) {
+    # print(i)
     if (i %in% indexList) {
       max_dis = max(cnv_max_dist, cnv_max_percent*(data[i,]$end-data[i,]$start))
       index_selected = which((data$chrom==data[i,]$chrom)&(data$start<=data[i,]$end)&(data[i,]$start<=data$end)&(abs(data$start-data[i,]$start)<max_dis)&(abs(data$end-data[i,]$end)<max_dis))
@@ -126,8 +127,8 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
         cnv_selected = data[index_selected,]
         data[index_selected,]$start = min(cnv_selected$start)
         data[index_selected,]$end = max(cnv_selected$end)
-        data[index_selected,]$drivers = paste(unique(unlist(strsplit(cnv_selected$drivers, ";"))), collapse=";")
-        data[index_selected,]$genes = paste(unique(unlist(strsplit(cnv_selected$genes, ";"))), collapse=";")
+        # data[index_selected,]$drivers = paste(unique(unlist(strsplit(cnv_selected$drivers, ";"))), collapse=";")
+        # data[index_selected,]$genes = paste(unique(unlist(strsplit(cnv_selected$genes, ";"))), collapse=";")
       }
       indexList <- indexList[!(indexList %in% index_selected)]
     }
@@ -242,8 +243,8 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
     tcn_tot <- add_missing_column(name_order, tcn_tot, tot_mean)
     tcn_alt <- add_missing_column(name_order, tcn_alt, alt_mean)
     
-    tcn_tot <- tcn_tot
-    tcn_alt <- tcn_alt
+    tcn_tot <- round(tcn_tot)
+    tcn_alt <- round(tcn_alt)
   }
   
   return_data <- list()
