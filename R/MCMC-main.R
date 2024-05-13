@@ -519,5 +519,7 @@ allThreshes <- function() {
   threshes[[11]] <- c(0.3,0.2)
   threshes[[12]] <- c(0.3,0.3)
   threshes[[13]] <- c(0.4,0.4)
+  threshes[[13]] <- c(0.5,0.5)
+  threshes[[13]] <- c(0.6,0.6)
   threshes
 }
