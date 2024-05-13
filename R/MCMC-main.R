@@ -290,11 +290,11 @@ mcmcMain <- function(mutation_file,
   dev.off()
   
   # plot violin plot
-  png(paste(outputDir, "violin.png", sep="/"))
-  print(
-    plotMCFViolin(chains$mcf_chain, chains$z_chain, indata = input_data)
-  )
-  dev.off()
+  # png(paste(outputDir, "violin.png", sep="/"))
+  # print(
+  #   plotMCFViolin(chains$mcf_chain, chains$z_chain, indata = input_data)
+  # )
+  # dev.off()
   
   # write mcf table
   mcfTable = writeClusterMCFsTable(chains$mcf_chain)
