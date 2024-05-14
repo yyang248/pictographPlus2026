@@ -39,25 +39,42 @@ importFiles <- function(mutation_file,
                                             autosome, 
                                             pval)
     
-    mutation_data$tcn = copy_number_data$tcn[, name_order, drop=FALSE]
-    
-    # bind SSM and CNA
-    mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)), rep(1,nrow(copy_number_data$tcn)))
-    mutation_data$y <- rbind(mutation_data$y, copy_number_data$tcn_alt[, name_order, drop=FALSE])
-    mutation_data$n <- rbind(mutation_data$n, copy_number_data$tcn_tot[, name_order, drop=FALSE])
-    mutation_data$MutID <- c(mutation_data$MutID, rownames(copy_number_data$tcn))
-    mutation_data$I <- mutation_data$I + nrow(copy_number_data$tcn)
-    
-    mutation_data$overlap = resolveOverlap(mutation_data)
-    mutation_data$tcn <- mutation_data$overlap %*% mutation_data$tcn
-    overlap <- mutation_data$overlap
-    colnames(overlap) <- sapply(colnames(mutation_data$overlap), function(col) {which(rownames(mutation_data$overlap)==col)})
-    
-    q <- vector("numeric", nrow(overlap))
-    for (i in 1:nrow(overlap)) {
-      q[i] <- ifelse(length(which(overlap[i,] == 1)) > 0, as.numeric(names(which(overlap[i,] == 1))[1]),i)
+    if (is.null(copy_number_data)) {
+      
+      mutation_data$icn <- rep(2, nrow(mutation_data$y))
+
+      mutation_data$mtp <- rep(1, nrow(mutation_data$y))
+
+      mutation_data$cncf <- mutation_data$y
+      mutation_data$cncf[] <- 0
+      
+      mutation_data$tcn = mutation_data$icn * mutation_data$cncf + 2 * ( 1 - mutation_data$cncf)
+      
+      mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)))
+      
+      mutation_data$cnnull <- TRUE
+      
+    } else {
+      mutation_data$tcn = copy_number_data$tcn[, name_order, drop=FALSE]
+      
+      # bind SSM and CNA
+      mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)), rep(1,nrow(copy_number_data$tcn)))
+      mutation_data$y <- rbind(mutation_data$y, copy_number_data$tcn_alt[, name_order, drop=FALSE])
+      mutation_data$n <- rbind(mutation_data$n, copy_number_data$tcn_tot[, name_order, drop=FALSE])
+      mutation_data$MutID <- c(mutation_data$MutID, rownames(copy_number_data$tcn))
+      mutation_data$I <- mutation_data$I + nrow(copy_number_data$tcn)
+      
+      mutation_data$overlap = resolveOverlap(mutation_data)
+      mutation_data$tcn <- mutation_data$overlap %*% mutation_data$tcn
+      overlap <- mutation_data$overlap
+      colnames(overlap) <- sapply(colnames(mutation_data$overlap), function(col) {which(rownames(mutation_data$overlap)==col)})
+      
+      q <- vector("numeric", nrow(overlap))
+      for (i in 1:nrow(overlap)) {
+        q[i] <- ifelse(length(which(overlap[i,] == 1)) > 0, as.numeric(names(which(overlap[i,] == 1))[1]),i)
+      }
+      mutation_data$q <- q
     }
-    mutation_data$q <- q
     
   } else {
     mutation_data = importMutationFileOnly(mutation_file, alt_reads_thresh, vaf_thresh)
@@ -145,6 +162,10 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
   
   data <- read_csv(copy_number_file, show_col_types = FALSE) # read copy number csv file
   
+  if (nrow(data)==0) {
+    return(NULL)
+  }
+  
   if ("baf" %in% colnames(data)) {
     message("inferring allele-specific copy number using BAF")
   } else if (!is.null(SNV_file)) {
@@ -191,8 +212,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
   output_data <- add_missing_column(name_order, output_data, 2)
   
   if ("baf" %in% colnames(data)) {
-    
-    
+    # TO DO: FILTER OUT TCN WITHIN NORMAL RANGE
     baf = as.matrix(data[c("sample", "CNA", "baf")] %>% pivot_wider(names_from = sample, values_from = baf, values_fill = 0.5))
     rownames(baf) <- baf[,'CNA']
     baf <- baf[,-1, drop=FALSE]
