@@ -171,6 +171,10 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
   
   if ("baf" %in% colnames(data)) {
     message("inferring allele-specific copy number using BAF")
+    
+    data <- data %>% 
+      filter(!(tcn >= tcn_normal_range[1] & tcn <= tcn_normal_range[2] & baf >= 0.3 & baf <= 0.7))
+    
   } else if (!is.null(SNV_file)) {
     message("inferring allele-specific copy number using heterozygous SNVs")
     # check unimodality at both normal and tumor sample
@@ -215,7 +219,6 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
   output_data <- add_missing_column(name_order, output_data, 2)
   
   if ("baf" %in% colnames(data)) {
-    # TO DO: FILTER OUT TCN WITHIN NORMAL RANGE
     baf = as.matrix(data[c("sample", "CNA", "baf")] %>% pivot_wider(names_from = sample, values_from = baf, values_fill = 0.5))
     rownames(baf) <- baf[,'CNA']
     baf <- baf[,-1, drop=FALSE]
