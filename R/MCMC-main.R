@@ -154,7 +154,7 @@ mcmcMain <- function(mutation_file,
         if (score == "silhouette") {
           best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
         } else {
-          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
         }
         
         chains <- mergeSetChains(best_set_chains, input_data)
@@ -215,7 +215,7 @@ mcmcMain <- function(mutation_file,
         if (score == "silhouette") {
           best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
         } else {
-          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
         }
         chains <- mergeSetChains(best_set_chains, input_data)
         
@@ -278,7 +278,7 @@ mcmcMain <- function(mutation_file,
   if (score=="silhouette") {
     best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
   } else {
-    best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+    best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
   }
   chains <- mergeSetChains(best_set_chains, input_data)
   
