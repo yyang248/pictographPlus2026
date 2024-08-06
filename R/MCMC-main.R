@@ -245,7 +245,7 @@ mcmcMain <- function(mutation_file,
                                               cluster_diff_thresh = cluster_diff_thresh, inits = inits, 
                                               n.iter = n.iter, n.burn = n.burn, thin = thin, mc.cores = mc.cores, model_type = "type2")
         
-      }
+       }
       
     } else {
       message("Not using sample presence; Using single model for both SSM and CNA")
