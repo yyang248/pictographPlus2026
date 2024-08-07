@@ -131,7 +131,7 @@ runMutSetMCMC <- function(temp_box,
     sc_tb <- tibble(K_tested = K_tested,
                      silhouette = sc_vec)
     sc_best_chains <- samps_list[[which.max(sc_vec)]]
-    res_list <- list(all_chains = samps_list,
+    res_list <- list(all_chains = filtered_samps_list,
                      silhouette = sc_tb,
                      BIC = bic_tb,
                      BIC_best_chains = BIC_best_chains,
@@ -368,11 +368,11 @@ filterK <- function(samps_list, min_mutation_per_cluster=1, cluster_diff_thresh=
       }
       mcfTable = writeClusterMCFsTable(mcf_chain)
       # check whether mcf for any cluster is less than cluster_diff_thresh in all samples
-      for (j1 in seq_len(k)) {
-        if (all(mcfTable[j1,2:ncol(mcfTable)] < cluster_diff_thresh)) {
-          toBreak = T
-        }
-      }
+      # for (j1 in seq_len(k)) {
+      #   if (all(mcfTable[j1,2:ncol(mcfTable)] < cluster_diff_thresh)) {
+      #     toBreak = T
+      #   }
+      # }
       # check whether mcf difference between any two clusters less than cluster_diff_thresh in all samples
       for (j1 in seq_len(k-1)) {
         for (j2 in seq(j1+1, k)) {

@@ -43,7 +43,7 @@ mcmcMain <- function(mutation_file,
                      vaf_thresh = 0, # placeholder
                      cnv_max_dist=2000, # placeholder
                      cnv_max_percent=0.30, # placeholder
-                     tcn_normal_range=c(1.8, 2.2), # placeholder
+                     tcn_normal_range=c(1.7, 2.3), # placeholder
                      smooth_cnv=F, # placeholder
                      autosome=T # placeholder
                      ) {
@@ -77,7 +77,7 @@ mcmcMain <- function(mutation_file,
   data <- assign("data", data, envir = .GlobalEnv)
   
   # use model 2 if only mutation file is provided
-  if (is.null(copy_number_file)) { 
+  if (data$cnnull) { 
     
     if (sample_presence) {
       message("Using sample presence; SSM only")
@@ -154,7 +154,7 @@ mcmcMain <- function(mutation_file,
         if (score == "silhouette") {
           best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
         } else {
-          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
         }
         
         chains <- mergeSetChains(best_set_chains, input_data)
@@ -215,7 +215,7 @@ mcmcMain <- function(mutation_file,
         if (score == "silhouette") {
           best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
         } else {
-          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
         }
         chains <- mergeSetChains(best_set_chains, input_data)
         
@@ -245,7 +245,7 @@ mcmcMain <- function(mutation_file,
                                               cluster_diff_thresh = cluster_diff_thresh, inits = inits, 
                                               n.iter = n.iter, n.burn = n.burn, thin = thin, mc.cores = mc.cores, model_type = "type2")
         
-      }
+       }
       
     } else {
       message("Not using sample presence; Using single model for both SSM and CNA")
@@ -278,7 +278,7 @@ mcmcMain <- function(mutation_file,
   if (score=="silhouette") {
     best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
   } else {
-    best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+    best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
   }
   chains <- mergeSetChains(best_set_chains, input_data)
   
@@ -290,11 +290,11 @@ mcmcMain <- function(mutation_file,
   dev.off()
   
   # plot violin plot
-  png(paste(outputDir, "violin.png", sep="/"))
-  print(
-    plotMCFViolin(chains$mcf_chain, chains$z_chain, indata = input_data)
-  )
-  dev.off()
+  # png(paste(outputDir, "violin.png", sep="/"))
+  # print(
+  #   plotMCFViolin(chains$mcf_chain, chains$z_chain, indata = input_data)
+  # )
+  # dev.off()
   
   # write mcf table
   mcfTable = writeClusterMCFsTable(chains$mcf_chain)
@@ -325,13 +325,14 @@ mcmcMain <- function(mutation_file,
     }
   }
 
-  if (is.null(copy_number_file)) {
+  if (data$cnnull) {
     cncfTable <- data$cncf
   } else {
     cncfTable <- findCncf(data, input_data, chains)
   }
-  # scores <- calcTreeScores(chains$mcf_chain, all_spanning_trees, purity=data$purity)
-  scores <- calculateTreeScoreMutations(chains$mcf_chain, data, icnTable, cncfTable, multiplicityTable, clusterAssingmentTable, data$purity, all_spanning_trees)
+  scores <- calcTreeScores(chains$mcf_chain, all_spanning_trees, purity=data$purity)
+  # scores <- calculateTreeScoreMutations(chains$mcf_chain, data, icnTable, cncfTable, multiplicityTable, clusterAssingmentTable, data$purity, all_spanning_trees)
+  scores <- assign("scores", scores, envir = .GlobalEnv)
   
   # plot all possible trees
   plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data)
@@ -341,12 +342,15 @@ mcmcMain <- function(mutation_file,
   write.table(best_tree, file=paste(outputDir, "tree.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   
   # plot best and ensemble tree
-  if (nrow(best_tree) >1 ) {
+  if (nrow(best_tree) >1) {
     png(paste(outputDir, "tree.png", sep="/"))
     plotTree(best_tree, palette = viridis::viridis)
     dev.off()
+  }
+  
+  if (length(which(scores == max(scores))) > 1) {
     png(paste(outputDir, "tree_ensemble.png", sep="/"))
-    plotEnsembleTree(all_spanning_trees, palette = viridis::viridis)
+    plotEnsembleTree(all_spanning_trees[which(scores == max(scores))], palette = viridis::viridis)
     dev.off()
   }
   
@@ -507,17 +511,18 @@ findCncf <- function(data, input_data, chains) {
 allThreshes <- function() {
   threshes <- list() 
   threshes[[1]] <- c(0,0)
-  threshes[[2]] <- c(0.1,0)
-  threshes[[3]] <- c(0,0.1)
-  threshes[[4]] <- c(0.1,0.1)
-  threshes[[5]] <- c(0.1,0.2)
-  threshes[[6]] <- c(0.2,0.1)
-  threshes[[7]] <- c(0.2,0.2)
-  threshes[[8]] <- c(0.1,0.3)
-  threshes[[9]] <- c(0.3,0.1)
-  threshes[[10]] <- c(0.2,0.3)
-  threshes[[11]] <- c(0.3,0.2)
-  threshes[[12]] <- c(0.3,0.3)
-  threshes[[13]] <- c(0.4,0.4)
+  threshes[[2]] <- c(0,0.2)
+  threshes[[3]] <- c(0,0.4)
+  threshes[[4]] <- c(0.1,0.2)
+  threshes[[5]] <- c(0.1,0.4)
+  threshes[[6]] <- c(0.2,0.3)
+  threshes[[7]] <- c(0.2,0.6)
+  threshes[[8]] <- c(0.3,0.3)
+  threshes[[9]] <- c(0.3,0.6)
+  threshes[[10]] <- c(0.3,0.9)
+  threshes[[11]] <- c(0.4,0.6)
+  threshes[[12]] <- c(0.4,0.9)
+  threshes[[13]] <- c(0.5,0.9)
+  threshes[[14]] <- c(0.6,1)
   threshes
 }

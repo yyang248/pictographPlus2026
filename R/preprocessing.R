@@ -39,29 +39,51 @@ importFiles <- function(mutation_file,
                                             autosome, 
                                             pval)
     
-    mutation_data$tcn = copy_number_data$tcn[, name_order, drop=FALSE]
-    
-    # bind SSM and CNA
-    mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)), rep(1,nrow(copy_number_data$tcn)))
-    mutation_data$y <- rbind(mutation_data$y, copy_number_data$tcn_alt[, name_order, drop=FALSE])
-    mutation_data$n <- rbind(mutation_data$n, copy_number_data$tcn_tot[, name_order, drop=FALSE])
-    mutation_data$MutID <- c(mutation_data$MutID, rownames(copy_number_data$tcn))
-    mutation_data$I <- mutation_data$I + nrow(copy_number_data$tcn)
-    
-    mutation_data$overlap = resolveOverlap(mutation_data)
-    mutation_data$tcn <- mutation_data$overlap %*% mutation_data$tcn
-    overlap <- mutation_data$overlap
-    colnames(overlap) <- sapply(colnames(mutation_data$overlap), function(col) {which(rownames(mutation_data$overlap)==col)})
-    
-    q <- vector("numeric", nrow(overlap))
-    for (i in 1:nrow(overlap)) {
-      q[i] <- ifelse(length(which(overlap[i,] == 1)) > 0, as.numeric(names(which(overlap[i,] == 1))[1]),i)
+    if (is.null(copy_number_data)) {
+      
+      mutation_data$icn <- rep(2, nrow(mutation_data$y))
+
+      mutation_data$mtp <- rep(1, nrow(mutation_data$y))
+
+      mutation_data$cncf <- mutation_data$y
+      mutation_data$cncf[] <- 0
+      
+      mutation_data$tcn = mutation_data$icn * mutation_data$cncf + 2 * ( 1 - mutation_data$cncf)
+      
+      mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)))
+      
+      mutation_data$cnnull <- TRUE
+      
+    } else {
+      mutation_data$tcn = copy_number_data$tcn[, name_order, drop=FALSE]
+      
+      # bind SSM and CNA
+      mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)), rep(1,nrow(copy_number_data$tcn)))
+      mutation_data$y <- rbind(mutation_data$y, copy_number_data$tcn_alt[, name_order, drop=FALSE])
+      mutation_data$n <- rbind(mutation_data$n, copy_number_data$tcn_tot[, name_order, drop=FALSE])
+      mutation_data$MutID <- c(mutation_data$MutID, rownames(copy_number_data$tcn))
+      mutation_data$I <- mutation_data$I + nrow(copy_number_data$tcn)
+      
+      mutation_data$overlap = resolveOverlap(mutation_data)
+      mutation_data$tcn <- mutation_data$overlap %*% mutation_data$tcn
+      # mutation_data$tcn[mutation_data$tcn==0] <- 2.0
+      
+      overlap <- mutation_data$overlap
+      colnames(overlap) <- sapply(colnames(mutation_data$overlap), function(col) {which(rownames(mutation_data$overlap)==col)})
+      
+      q <- vector("numeric", nrow(overlap))
+      for (i in 1:nrow(overlap)) {
+        q[i] <- ifelse(length(which(overlap[i,] == 1)) > 0, as.numeric(names(which(overlap[i,] == 1))[1]),i)
+      }
+      mutation_data$q <- q
+      
+      mutation_data$cnnull <- FALSE
     }
-    mutation_data$q <- q
     
   } else {
     mutation_data = importMutationFileOnly(mutation_file, alt_reads_thresh, vaf_thresh)
     mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)))
+    mutation_data$cnnull <- TRUE
   }
   return(mutation_data)
 }
@@ -118,6 +140,7 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
   indexList = seq_len(nrow(data))
   
   for (i in seq_len(nrow(data))) {
+    # print(i)
     if (i %in% indexList) {
       max_dis = max(cnv_max_dist, cnv_max_percent*(data[i,]$end-data[i,]$start))
       index_selected = which((data$chrom==data[i,]$chrom)&(data$start<=data[i,]$end)&(data[i,]$start<=data$end)&(abs(data$start-data[i,]$start)<max_dis)&(abs(data$end-data[i,]$end)<max_dis))
@@ -126,8 +149,8 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
         cnv_selected = data[index_selected,]
         data[index_selected,]$start = min(cnv_selected$start)
         data[index_selected,]$end = max(cnv_selected$end)
-        data[index_selected,]$drivers = paste(unique(unlist(strsplit(cnv_selected$drivers, ";"))), collapse=";")
-        data[index_selected,]$genes = paste(unique(unlist(strsplit(cnv_selected$genes, ";"))), collapse=";")
+        # data[index_selected,]$drivers = paste(unique(unlist(strsplit(cnv_selected$drivers, ";"))), collapse=";")
+        # data[index_selected,]$genes = paste(unique(unlist(strsplit(cnv_selected$genes, ";"))), collapse=";")
       }
       indexList <- indexList[!(indexList %in% index_selected)]
     }
@@ -144,8 +167,16 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
   
   data <- read_csv(copy_number_file, show_col_types = FALSE) # read copy number csv file
   
+  if (nrow(data)==0) {
+    return(NULL)
+  }
+  
   if ("baf" %in% colnames(data)) {
     message("inferring allele-specific copy number using BAF")
+    
+    data <- data %>% 
+      filter(!(tcn >= tcn_normal_range[1] & tcn <= tcn_normal_range[2] & baf >= 0.3 & baf <= 0.7))
+    
   } else if (!is.null(SNV_file)) {
     message("inferring allele-specific copy number using heterozygous SNVs")
     # check unimodality at both normal and tumor sample
@@ -153,10 +184,10 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
     # NOTE: TO DO; Not working yet thus only incuding cna in certain range, but not LOH
     data <- check_sample_LOH(data, outputDir, SNV_file, tcn_normal_range=tcn_normal_range, pval=pval) 
     data <- data[data$to_keep==1,] # keep rows is to_keep is 1
+    
   } else {
     stop("Please provide either a baf column in the copy number file or supply a SNV file with heterozygous SNV counts")
   }
-  
   
   data$tcn[data$tcn==2] <- 2.01 # make tcn=2 -> 2.01 to avoid confusion during sample presence
   
@@ -199,18 +230,20 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
     rownames(baf) = rowname
     colnames(baf) = colname
     
-    tcn_tot <- matrix(2000, nrow(output_data), ncol(output_data))
+    baf <- add_missing_column(name_order, baf, 0.5)
+    
+    tcn_tot <- matrix(3000, nrow(output_data), ncol(output_data))
     rownames(tcn_tot) <- rownames(output_data)
     colnames(tcn_tot) <- colnames(output_data)
     
-    tcn_tot <- add_missing_column(name_order, tcn_tot, 2000)
+    tcn_tot <- add_missing_column(name_order, tcn_tot, 3000)
     
     tcn_alt <- matrix(round(tcn_tot * baf), nrow(output_data),ncol(output_data))
     tcn_alt <- pmax(tcn_alt, tcn_tot - tcn_alt)
     rownames(tcn_alt) <- rownames(output_data)
     colnames(tcn_alt) <- colnames(output_data)
     
-    tcn_alt <- add_missing_column(name_order, tcn_alt, 1000)
+    # tcn_alt <- add_missing_column(name_order, tcn_alt, 1000)
     
   } else if (!is.null(SNV_file)) {
     tcn_ref <- list()
@@ -242,8 +275,8 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
     tcn_tot <- add_missing_column(name_order, tcn_tot, tot_mean)
     tcn_alt <- add_missing_column(name_order, tcn_alt, alt_mean)
     
-    tcn_tot <- tcn_tot
-    tcn_alt <- tcn_alt
+    tcn_tot <- round(tcn_tot)
+    tcn_alt <- round(tcn_alt)
   }
   
   return_data <- list()
@@ -295,7 +328,7 @@ check_sample_LOH <- function(data, outputDir, SNV_file, tcn_normal_range=c(1.5, 
     SNV_temp <- SNV_data %>% filter(chroms==data[i,]$chrom & position>=data[i,]$start & position<=data[i,]$end)
     sample <- data[i,]$sample
     
-    if (nrow(SNV_temp) > 6) {
+    if (nrow(SNV_temp) > 2) {
       vaf_germline <- SNV_temp$germline_alt / (SNV_temp$germline_alt + SNV_temp$germline_ref)
       germline_test <- dip.test(vaf_germline)
       alt = paste(sample, "alt", sep="_")
@@ -405,7 +438,8 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
 
   if (any(output_data$n==0)) {
     # print("Total read counts of 0 encoutered. Replaced 0 with mean total read count.")
-    output_data$n[output_data$n==0] <- round(mean(output_data$n[output_data$n!=0]))
+    # output_data$n[output_data$n==0] <- round(mean(output_data$n[output_data$n!=0]))
+    output_data$n[output_data$n==0] <- 2000
   }
 
   output_data$S = ncol(output_data$y)
@@ -453,7 +487,7 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
   
   if (any(output_data$n==0)) {
     print("Total read counts of 0 encoutered. Replaced 0 with mean total read count.")
-    output_data$n[output_data$n==0] <- round(mean(output_data$n))
+    output_data$n[output_data$n==0] <- 2000
   }
   
   output_data$icn <- as.matrix(data[c("mutation", "sample", "tumor_integer_copy_number")] %>% pivot_wider(names_from = sample, values_from = tumor_integer_copy_number, values_fill = 2))
