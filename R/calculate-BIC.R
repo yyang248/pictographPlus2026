@@ -19,7 +19,7 @@ calcChainBIC <- function(chains, input.data, pattern, model_type) {
   
   ww <- ww[,which(strsplit(pattern, split="")[[1]]=="1"),drop=FALSE]
   
-  mm <- writeMultiplicityTable(chains$m_chain)%>%
+  mm <- writeMultiplicityTable(chains$m_chain, chains$icn_chain)%>%
     mutate(Mut_ID = as.numeric(gsub("Mut","",Mut_ID)))%>%
     arrange(Mut_ID)%>%
     select(c("Multiplicity")) %>%
@@ -84,7 +84,7 @@ calcChainSilhouette <- function(chains, input.data, pattern, model_type) {
   
   ww <- ww[,which(strsplit(pattern, split="")[[1]]=="1"),drop=FALSE]
   
-  mm <- writeMultiplicityTable(chains$m_chain)%>%
+  mm <- writeMultiplicityTable(chains$m_chain, chains$icn_chain)%>%
     mutate(Mut_ID = as.numeric(gsub("Mut","",Mut_ID)))%>%
     arrange(Mut_ID)%>%
     select(c("Multiplicity")) %>%
@@ -97,18 +97,21 @@ calcChainSilhouette <- function(chains, input.data, pattern, model_type) {
     mcf <- ifelse(is_cn==0, vaf * input.data$tcn, (input.data$tcn * vaf - 1) / (mm - 1))
     mcf <- ifelse(mcf<0, ww, mcf)    
     mcf <- ifelse(mcf>1, ww, mcf)
+    mcf <- ifelse(is.na(mcf), ww, mcf)
   }
   
   if (model_type=="type2") {
     mcf <- ifelse(is_cn==0, input.data$tcn * vaf - (mm-1) * input.data$cncf, (input.data$tcn * vaf - 1) / (mm - 1))
     mcf <- ifelse(mcf<0, ww, mcf)    
     mcf <- ifelse(mcf>1, ww, mcf)
+    mcf <- ifelse(is.na(mcf), ww, mcf)
   }
   
   if (model_type=="type3") {
     mcf <- ifelse(is_cn==0, input.data$tcn * vaf - (mm-1) * ww[input.data$q,,drop=FALSE], (input.data$tcn * vaf - 1) / (mm - 1))
     mcf <- ifelse(mcf<0, ww, mcf)    
     mcf <- ifelse(mcf>1, ww, mcf)
+    mcf <- ifelse(is.na(mcf), ww, mcf)
   }
   
   sil_widths <- silhouette(zz, dist(mcf))
