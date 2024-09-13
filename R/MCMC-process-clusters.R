@@ -97,6 +97,20 @@ writeMultiplicityTable <- function(m_chain, icn_chain, Mut_ID = NULL) {
   # map_m <- estimateMultiplicity(m_chain)
   map_icn <- estimateICN(icn_chain)
   map_m <- bind_cols(m_chain, icn_chain %>% rename(Ite=Iteration, Ch=Chain, Para=Parameter, val=value)) %>% left_join(map_icn %>% rename(Parameter1=Parameter, value1=value), by=join_by('Para'=='Parameter1')) %>% filter(val==value1) %>% group_by(Parameter) %>% count(value, sort=T) %>% slice_max(n, with_ties = F) %>% ungroup() %>% select(Parameter, value) 
+  
+  # assumes only one copy number change of the same segment, so multiplicity cannot equal to icn if gain
+  map_m <- map_m %>%
+    mutate(number = str_extract(Parameter, "\\d+"))  # Extract numeric part from m[number]
+  
+  map_icn <- map_icn %>%
+    mutate(number = str_extract(Parameter, "\\d+"))  # Extract numeric part from icn[number]
+  
+  # Now perform the join based on the extracted number and apply the conditional transformation
+  map_m <- map_m %>%
+    left_join(map_icn, by = "number", suffix = c("_m", "_icn")) %>%  # Join on the number column
+    mutate(value_m = ifelse(value_icn > 2 & value_m == value_icn, value_m - 1, value_m)) %>%
+    select(Parameter = Parameter_m, value = value_m)
+  
   if (is.null(Mut_ID)) {
     Mut_ID <- paste0("Mut", 1:nrow(map_m))
   }
