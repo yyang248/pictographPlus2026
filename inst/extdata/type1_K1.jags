@@ -33,8 +33,9 @@ model {
 	  icn1[i] ~ dpois(2)
 	  icn[i] <- ifelse(is_cn[i]==0, 2, icn1[i])
 	  
-	  m1[i] ~ dpois(1)
-	  m2[i] <- min(m1[i], icn[i])
+	  m0[i] ~ dpois(1)
+	  m1[i] <- ifelse(icn[i]>2, icn[i]-1, icn[i])
+	  m2[i] <- min(m1[i], m0[i])
 	  
 	  #lambda[i] ~ dbin(0.5, 1)
 	  #m3[i] <- lambda[i]*m2[i] + (1-lambda[i])*(icn[i]-m2[i])
@@ -49,7 +50,7 @@ model {
 			eta[1,s] ~ dbeta(5,2)
 			z.eta[1,s] ~ dcat(c(eta[1,s], 1-eta[1,s]))
 
-			mcf1[1,s] ~ dbeta(1,1)T(0.01, purity[s])
+			mcf1[1,s] ~ dbeta(1,1)T(0.05, purity[s])
 			mcf[1,s] <- ifelse(z.eta[1,s] == 1, mcf1[1,s], 0)
 	}
 
