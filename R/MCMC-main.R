@@ -40,6 +40,7 @@ mcmcMain <- function(mutation_file,
                      mc.cores=8, 
                      inits=list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123),
                      threshes=NULL,
+                     LOH = FALSE,
                      alt_reads_thresh = 0, # placeholder
                      vaf_thresh = 0, # placeholder
                      cnv_max_dist=2000, # placeholder
@@ -53,6 +54,7 @@ mcmcMain <- function(mutation_file,
                       copy_number_file, 
                       outputDir, 
                       SNV_file=SNV_file, 
+                      LOH=LOH,
                       alt_reads_thresh=alt_reads_thresh, 
                       vaf_thresh=vaf_thresh, 
                       cnv_max_dist=cnv_max_dist, 

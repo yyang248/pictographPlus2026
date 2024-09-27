@@ -9,6 +9,7 @@ importFiles <- function(mutation_file,
                         copy_number_file=NULL, 
                         SNV_file=NULL, 
                         outputDir=NULL,
+                        LOH = FALSE,
                         alt_reads_thresh = 0, # to be tested
                         vaf_thresh = 0, # to be tested
                         cnv_max_dist=2000, # to be tested
@@ -31,6 +32,7 @@ importFiles <- function(mutation_file,
     copy_number_data = importCopyNumberFile(copy_number_file, 
                                             outputDir, 
                                             SNV_file, 
+                                            LOH, 
                                             name_order,
                                             cnv_max_dist, 
                                             cnv_max_percent, 
@@ -166,7 +168,7 @@ smoothCNV <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
 #' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
 #' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
 #' @param smooth_cnv: process input CNV to merge  segments with similar distance
-importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, name_order=NULL, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T, pval=0.05) {
+importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, LOH=FALSE, name_order=NULL, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T, pval=0.05) {
   
   data <- read_csv(copy_number_file, show_col_types = FALSE) # read copy number csv file
   
@@ -185,7 +187,7 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, nam
     # check unimodality at both normal and tumor sample
     
     # NOTE: TO DO; Not working yet thus only incuding cna in certain range, but not LOH
-    data <- check_sample_LOH(data, outputDir, SNV_file, tcn_normal_range=tcn_normal_range, pval=pval) 
+    data <- check_sample_LOH(data, outputDir, SNV_file, LOH, tcn_normal_range=tcn_normal_range, pval=pval) 
     data <- data[data$to_keep==1,] # keep rows is to_keep is 1
     
   } else {
@@ -310,7 +312,7 @@ add_missing_column <- function(name_order, output_data, val) {
 #' @import parallel
 #' @import diptest
 #' 
-check_sample_LOH <- function(data, outputDir, SNV_file, tcn_normal_range=c(1.5, 2.5), pval=0.05) {
+check_sample_LOH <- function(data, outputDir, SNV_file, LOH, tcn_normal_range=c(1.8, 2.2), pval=0.05) {
 
   SNV_data <- read_csv(SNV_file)
   samples <- unique(data$sample)
@@ -369,8 +371,11 @@ check_sample_LOH <- function(data, outputDir, SNV_file, tcn_normal_range=c(1.5, 
             if (tumor_test$p.value < pval/nrow(data)) {
               # NOTE: TO DO
               # warning("check_sample_LOH diptest seems not working; not detecting LOH; more testing needed")
-              to_keep_index <- c(to_keep_index, 1)
-              # to_keep_index <- c(to_keep_index, 0)
+              if (LOH) {
+                to_keep_index <- c(to_keep_index, 1)
+              } else {
+                to_keep_index <- c(to_keep_index, 0)
+              }
               plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, ", pval: ", tumor_test$p.value, sep=""))
 
             } else { # disregard if only one peak
