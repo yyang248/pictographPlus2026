@@ -1,12 +1,12 @@
-Package: pictograph2
+Package: pictographPlus
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.1
+Title: Tumor evolution reconstruction using MCMC
+Version: 0.2.0
 Author: Jiaying Lai
 Maintainer: The package maintainer <jlai33@jh.edu>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Description: This package is used to perform tumor evolution reconstruction using genomic data. 
+In addition, the tool can also estimate clone-level RNA expression from bulk-RNA data.
+License: MIT
 Encoding: UTF-8
 LazyData: true
 Imports:
