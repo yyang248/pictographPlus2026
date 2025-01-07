@@ -104,20 +104,23 @@ plotTree <- function(edges, filtered_table=NULL, palette=viridis::viridis) {
   
   layout <- layout_as_tree(ig)
   
-  max_cluster <- filtered_table %>%
-    count(Cluster) %>%                  # Count occurrences of each unique Cluster
-    arrange(desc(n)) %>%                # Arrange by count in descending order
-    slice(1) 
+  if (!is.null(filtered_table)) {
+    max_cluster <- filtered_table %>%
+      count(Cluster) %>%                  # Count occurrences of each unique Cluster
+      arrange(desc(n)) %>%                # Arrange by count in descending order
+      slice(1) 
   
-  if (ecount(ig) > 3 & max_cluster$n > 4) {
-    # Scale the y-coordinates of the layout based on edge lengths
-    for (i in seq_len(ecount(ig))) {
-      parent <- ends(ig, i)[1]  # Get the parent node
-      child <- ends(ig, i)[2]   # Get the child node
-      
-      # Scale child y-coordinate based on edge length
-      layout[which(V(ig)$name == child), 2] <- 
-        layout[which(V(ig)$name == parent), 2] - adjusted_edge_lengths[i] * 0.1
+  
+    if (ecount(ig) > 3 & max_cluster$n > 4) {
+      # Scale the y-coordinates of the layout based on edge lengths
+      for (i in seq_len(ecount(ig))) {
+        parent <- ends(ig, i)[1]  # Get the parent node
+        child <- ends(ig, i)[2]   # Get the child node
+        
+        # Scale child y-coordinate based on edge length
+        layout[which(V(ig)$name == child), 2] <- 
+          layout[which(V(ig)$name == parent), 2] - adjusted_edge_lengths[i] * 0.1
+      }
     }
   }
  

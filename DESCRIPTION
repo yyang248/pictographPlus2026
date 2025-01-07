@@ -22,5 +22,6 @@ Imports:
   GSVA (>= 2.0.0),
   pheatmap (>= 1.0.12),
   limma (>= 3.62.1),
+  fgsea (>= 1.32.0),
   GSEABase (>= 1.68.0)
 RoxygenNote: 7.3.2

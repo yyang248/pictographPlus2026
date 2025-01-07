@@ -1,5 +1,5 @@
 ---
-title: "PICTograph2"
+title: "PICTographPlus"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{PICTograph}
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 # library(pictograph2)
 # library(dplyr)
 
-setwd("~/JHU/scripts/R/pictograph2")
+setwd("~/Desktop/scripts/R/pictographPlus")
 library(devtools)
 load_all()
 library(UpSetR)

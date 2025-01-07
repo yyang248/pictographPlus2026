@@ -1,6 +1,5 @@
 #' @import GSVA, pheatmap, limma
 #' @export
-#' 
 #' @param mutation_file a csv file that include information for SSMs.
 #' @param rna_file bulk RNA file in integer read counts; rows are samples and columns are genes
 #' @param outputDir output directory for saving all files.

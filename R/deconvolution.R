@@ -82,7 +82,7 @@ runDeconvolution <- function(rna_file,
 
 
 #' @export
-#' @import GSVA, pheatmap, limma, GSEABase, ggplot2, ggrepel
+#' @import GSVA, pheatmap, limma, ggplot2, ggrepel, fgsea, GSEABase
 runGSEA <- function(X_optimal,
                     outputDir,
                     treeFile,
@@ -301,12 +301,12 @@ GSEA_diff <- function(expr_matrix, sample1, sample2, gene_list, GSEA_dir, n_perm
   #                       nperm = n_permutations)
   gsea_results <- fgseaMultilevel(pathways = gene_list,stats = ranked_genes)
   gsea_results$Log10padj <- -log10(gsea_results$padj)
-  
-  # top_up <- gsea_results %>% arrange(desc(NES)) %>% slice_head(n = n)
-  # top_down <- gsea_results %>% arrange(NES) %>% slice_head(n = n)
-  # gsea_top <- bind_rows(top_up, top_down)
-  # gsea_top <- gsea_top %>% filter(padj < 0.05)
-  gsea_top <- gsea_results %>% filter(padj < 0.05)
+
+  top_up <- gsea_results %>% arrange(desc(NES)) %>% slice_head(n = n)
+  top_down <- gsea_results %>% arrange(NES) %>% slice_head(n = n)
+  gsea_top <- bind_rows(top_up, top_down)
+  gsea_top <- gsea_top %>% filter(padj < 0.05)
+  # gsea_top <- gsea_results %>% filter(padj < 0.05)
   
   horizontal_top_plot <- ggplot(gsea_top, aes(x = Log10padj, y = reorder(pathway, NES), fill = NES)) +
     geom_bar(stat = "identity") +
