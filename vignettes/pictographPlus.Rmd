@@ -15,13 +15,13 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, include = FALSE}
-# library(pictograph2)
+# library(pictographPlus)
 # library(dplyr)
 
 setwd("~/Desktop/scripts/R/pictographPlus")
 library(devtools)
 load_all()
-library(UpSetR)
+# library(UpSetR)
 
 ```
 
@@ -40,45 +40,45 @@ Pictograph2 takes input data in multiple formats for flexible user inputs:
 2.1. The first option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf".  If a mutation has no copy number alteration, set cncf to 0.
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example1_snv.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example1_snv.csv', package = 'pictographPlus')))
 ```
 
 Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele. If "major_integer_copy_number" is not provided, it will be estimated using an internal function built in the package.
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example2_snv.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example2_snv.csv', package = 'pictographPlus')))
 ```
 
 Another optional column is "purity" column that provides the information of normal contamination of a sample. Putiry of 0.8 wil be used if not provided.
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example2_snv_with_purity.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example2_snv_with_purity.csv', package = 'pictographPlus')))
 ```
 
 2.2. The second option is to provide the SSM read counts and copy number alterations (CNA) in two separate files. In this case, the SSM file should contain columns "sample", "mutation", "total_reads", "alt_reads", "chrom", "start", and "end". The "purity" column with be optional. 
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example3_snv.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example3_snv.csv', package = 'pictographPlus')))
 ```
 
 The CNA file should contain columns "sample", "chrom", "start", "end", "tcn" and "baf".
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example3_cna.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example3_cna.csv', package = 'pictographPlus')))
 ```
 
 2.3. In the absence of the baf column, users should provide an additional file that contains the count of the heterozygous germline SNVs that has the information about the "chroms", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. Note: the sample name should matched the sample name used in the SSM and CNA file.
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example4_snv.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example4_snv.csv', package = 'pictographPlus')))
 ```
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example4_cna.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example4_cna.csv', package = 'pictographPlus')))
 ```
 
 ```{r}
-head(read.csv(system.file('extdata/examples/example4_SNP.csv', package = 'pictograph2')))
+head(read.csv(system.file('extdata/examples/example4_SNP.csv', package = 'pictographPlus')))
 ```
 
 ## 3. mcmcMain
@@ -86,17 +86,17 @@ head(read.csv(system.file('extdata/examples/example4_SNP.csv', package = 'pictog
 Run an automated pipeline of the tool using the function mcmcMain. The only required user input is the "mutation_file", along with the "copy_number_file" and "SNV_file" if using format 2 or 3 mentioned above. Users can specify the destination of output files using "outputDir" option. If the outputDir is not specified, output files will be stored in the current working directory.
 
 ```{r input_data}
-# mcmcMain(mutation_file=system.file('extdata/examples/example1_snv.csv', package = 'pictograph2'),
+# runPictograph(mutation_file=system.file('extdata/examples/example1_snv.csv', package = 'pictographPlus'),
 #          copy_number_file=NULL,
 #          SNV_file=NULL,
-#          outputDir=system.file('extdata/examples/output', package = 'pictograph2'))
+#          outputDir=system.file('extdata/examples/output', package = 'pictographPlus'))
 ```
 ## 4. Parameters
 
 Description of the available parameters can be found using: 
 
 ```{r}
-help(mcmcMain)
+help(runPictograph)
 ```
 
 
@@ -158,13 +158,13 @@ $mcf$: cluster mutation cellular fraction
 #### Model 1: estimates $icn$, $m$, and $cncf$ using SSMs in copy-neutral region and CNAs
 
 ```{r, echo=FALSE, out.width="70%"}
-knitr::include_graphics(system.file('extdata/model1.png', package = 'pictograph2'))
+knitr::include_graphics(system.file('extdata/model1.png', package = 'pictographPlus'))
 ```
 
 #### Model 2: use the  $icn$, $m$, and $cncf$ estimated from model 1 and estimate all parameters in all mutations
 
 ```{r, echo=FALSE, out.width="70%"}
-knitr::include_graphics(system.file('extdata/model2.png', package = 'pictograph2'))
+knitr::include_graphics(system.file('extdata/model2.png', package = 'pictographPlus'))
 ```
 
 #### If only a single SSM file is provided as input, model 2 will be used

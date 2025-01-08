@@ -3,7 +3,7 @@
 \name{pictographPlus-package}
 \alias{pictographPlus-package}
 \alias{pictographPlus}
-\title{pictograph2}
+\title{pictographPlus}
 \description{
 infer tumor evolution using SNV and CNA
 }
