@@ -32,6 +32,7 @@ runPICTographPlus <- function(
     score="silhouette", # either BIC or silhouette
     max_K = 10, 
     min_mutation_per_cluster=5, 
+    min_cluster_thresh=0.05, 
     cluster_diff_thresh=0.05,
     n.iter=5000, 
     n.burn=1000, 
@@ -50,6 +51,7 @@ runPICTographPlus <- function(
     cnv_max_dist=1000000, # placeholder
     cnv_max_percent=0.30, # placeholder
     tcn_normal_range=c(1.7, 2.3), # placeholder
+    filter_cnv = T, # placeholder
     smooth_cnv=F, # placeholder
     autosome=T # placeholder
 ) {
