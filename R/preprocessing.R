@@ -10,11 +10,13 @@ importFiles <- function(mutation_file,
                         SNV_file=NULL, 
                         outputDir=NULL,
                         LOH = FALSE,
+                        purity_min = 0.2,
                         alt_reads_thresh = 0, # to be tested
                         vaf_thresh = 0, # to be tested
                         cnv_max_dist=1000000, # to be tested
                         cnv_max_percent=0.30, # to be tested
-                        tcn_normal_range=c(1.7, 2.3), # to be tested
+                        tcn_normal_range=c(1.75, 2.3), # to be tested
+                        filter_cnv = T, # to be tested
                         smooth_cnv=F, # to be tested
                         autosome=T, # to be tested
                         pval=0.05 # to be tested
@@ -26,7 +28,7 @@ importFiles <- function(mutation_file,
   
   if (!is.null(copy_number_file)) {
     # keep mutations if alt_reads >= alt_reads_thresh and vaf >= vaf_thresh
-    mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh)
+    mutation_data = importMutationFile(mutation_file, alt_reads_thresh, vaf_thresh, purity_min)
     name_order <- colnames(mutation_data$y)
     
     copy_number_data = importCopyNumberFile(copy_number_file, 
@@ -36,7 +38,8 @@ importFiles <- function(mutation_file,
                                             name_order,
                                             cnv_max_dist, 
                                             cnv_max_percent, 
-                                            tcn_normal_range, 
+                                            tcn_normal_range,
+                                            filter_cnv,
                                             smooth_cnv, 
                                             autosome, 
                                             pval)
@@ -83,7 +86,7 @@ importFiles <- function(mutation_file,
     }
     
   } else {
-    mutation_data = importMutationFileOnly(mutation_file, alt_reads_thresh, vaf_thresh)
+    mutation_data = importMutationFileOnly(mutation_file, alt_reads_thresh, vaf_thresh, purity_min)
     mutation_data$is_cn <- c(rep(0, nrow(mutation_data$y)))
     mutation_data$cnnull <- TRUE
   }
@@ -193,7 +196,10 @@ resegmentation <- function(data, cnv_max_dist=2000, cnv_max_percent=0.30) {
 #' @param cnv_max_dist: maximum of distance allowed between two segments to assign as the same one
 #' @param cnv_max_percent: maximum percentage of distance allowed between two segments to assign as the same one
 #' @param smooth_cnv: process input CNV to merge  segments with similar distance
-importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, LOH=FALSE, name_order=NULL, cnv_max_dist=2000, cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), smooth_cnv=F, autosome=T, pval=0.05) {
+importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, 
+                                 LOH=FALSE, name_order=NULL, cnv_max_dist=2000, 
+                                 cnv_max_percent=0.30, tcn_normal_range=c(1.8, 2.2), 
+                                 filter_cnv = T, smooth_cnv=F, autosome=T, pval=0.05) {
   
   data <- read_csv(copy_number_file, show_col_types = FALSE) # read copy number csv file
   
@@ -209,8 +215,10 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, LOH
   if ("baf" %in% colnames(data)) {
     message("inferring allele-specific copy number using BAF")
     
-    data <- data %>% 
-      filter(!(tcn >= tcn_normal_range[1] & tcn <= tcn_normal_range[2] & baf >= 0.3 & baf <= 0.7))
+    if (filter_cnv) {
+      data <- data %>% 
+        filter(!(tcn >= tcn_normal_range[1] & tcn <= tcn_normal_range[2] & baf >= 0.3 & baf <= 0.7))
+    }
     
   } else if (!is.null(SNV_file)) {
     message("inferring allele-specific copy number using heterozygous SNVs")
@@ -218,13 +226,15 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL, LOH
     
     # NOTE: TO DO; Not working yet thus only incuding cna in certain range, but not LOH
     data <- check_sample_LOH(data, outputDir, SNV_file, LOH, tcn_normal_range=tcn_normal_range, pval=pval) 
-    data <- data[data$to_keep==1,] # keep rows is to_keep is 1
+    if (filter_cnv) {
+      data <- data[data$to_keep==1,] # keep rows is to_keep is 1
+    }
     
   } else {
     stop("Please provide either a baf column in the copy number file or supply a SNV file with heterozygous SNV counts")
   }
   
-  data$tcn[data$tcn==2] <- 2.01 # make tcn=2 -> 2.01 to avoid confusion during sample presence
+  data$tcn[data$tcn==2] <- 2.001 # make tcn=2 -> 2.01 to avoid confusion during sample presence
   
   # Smooth segments so segments with different start/end position are treated the same, 
   # conditioned on overlapping and distance between positions
@@ -415,9 +425,14 @@ check_sample_LOH <- function(data, outputDir, SNV_file, LOH, tcn_normal_range=c(
               to_keep_index <- c(to_keep_index, 0)
             }
           } else { # keep CNA because tcn not in normal range
-            if (tumor_test$p.value < pval/nrow(data)) {
+            # if (tumor_test$p.value < pval/nrow(data)) {
+            pval1 = 0.0001
+            if (is.bimodal(vaf)) {
+              pval1 = 0.001
+            }
+            if (tumor_test$p.value < pval1) {
               to_keep_index <- c(to_keep_index, 1)
-              plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, sep=""))
+              plot(density(vaf), xlim=c(0,1), main = paste(data[i,]$sample, "\n", data[i,]$chrom, ":", data[i,]$start, "-", data[i,]$end, "\n tcn: ", data[i,]$tcn, ", pval: ", tumor_test$p.value, sep=""))
             } else {
               to_keep_index <- c(to_keep_index, 0)
             }
@@ -438,7 +453,7 @@ check_sample_LOH <- function(data, outputDir, SNV_file, LOH, tcn_normal_range=c(
 }
 
 #' import mutation file
-importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0) {
+importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0, purity_min=0.2) {
   data <- read_csv(mutation_file, show_col_types = FALSE)
   data <- data %>% filter(alt_reads/total_reads>=vaf_thresh, alt_reads>=alt_reads_thresh)
   output_data <- list()
@@ -473,6 +488,7 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
     rownames(output_data$purity) = rowname
     colnames(output_data$purity) = colname
     output_data$purity = colSums(output_data$purity) / colSums(!!output_data$purity)
+    output_data$purity <- pmax(output_data$purity, purity_min)
   } else {
     output_data$purity = rep(0.8, ncol(output_data$y))
   }
@@ -501,7 +517,7 @@ importMutationFile <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh =
 }
 
 #' import mutation file
-importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0) {
+importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0, purity_min=0.2) {
   data <- read_csv(mutation_file, show_col_types = FALSE)
   data <- data %>% filter(alt_reads/total_reads>=vaf_thresh, alt_reads>=alt_reads_thresh)
   output_data <- list()
@@ -587,6 +603,7 @@ importMutationFileOnly <- function(mutation_file, alt_reads_thresh = 0, vaf_thre
     rownames(output_data$purity) = rowname
     colnames(output_data$purity) = colname
     output_data$purity = colSums(output_data$purity) / colSums(!!output_data$purity)
+    output_data$purity <- pmax(output_data$purity, purity_min)
   } else {
     output_data$purity = rep(0.8, ncol(output_data$y))
   }
