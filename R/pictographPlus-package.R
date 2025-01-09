@@ -18,8 +18,6 @@
 #' @import stringr
 #' @import UpSetR
 #' @import cluster
-#' @import pheatmap
-#' @import limma
 #' @import ggrepel
 #' @import fgsea
 #' @import diptest
