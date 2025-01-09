@@ -84,6 +84,7 @@ runPICTographPlus <- function(
            cnv_max_dist=cnv_max_dist, # placeholder
            cnv_max_percent=cnv_max_percent, # placeholder
            tcn_normal_range=tcn_normal_range, # placeholder
+           filter_cnv=filter_cnv,
            smooth_cnv=smooth_cnv, # placeholder
            autosome=autosome # placeholder
   )
