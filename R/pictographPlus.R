@@ -51,7 +51,7 @@ runPICTographPlus <- function(
     vaf_thresh = 0, # placeholder
     cnv_max_dist=1000000, # placeholder
     cnv_max_percent=0.30, # placeholder
-    tcn_normal_range=c(1.7, 2.3), # placeholder
+    tcn_normal_range=c(1.75, 2.3), # placeholder
     filter_cnv = T, # placeholder
     smooth_cnv=F, # placeholder
     autosome=T # placeholder
