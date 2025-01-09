@@ -311,7 +311,7 @@ GSEA_diff <- function(expr_matrix, sample1, sample2, gene_list, GSEA_dir, n_perm
   horizontal_top_plot <- ggplot(gsea_top, aes(x = Log10padj, y = reorder(pathway, NES), fill = NES)) +
     geom_bar(stat = "identity") +
     geom_vline(xintercept = -log10(0.05), color = "green", linetype = "dashed", size = 1) +
-    scale_fill_gradientn(colors = c("blue", "red"), name = "NES", oob = scales::squish) +
+    scale_fill_gradientn(colors = c("blue", "red"), name = "NES", oob = scales::squish, limits = c(-2, 2)) +
     labs(x = "-log10(p-adj)", y = "Pathway", title = paste("Top Differential Pathways between Clone ", sample2, " and Clone ", sample1)) +
     theme(axis.text.y = element_text(size = 16), 
           axis.text.x = element_text(size = 14),
