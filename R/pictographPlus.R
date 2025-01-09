@@ -43,6 +43,7 @@ runPICTographPlus <- function(
     cytobandFile = NULL,
     threshes=NULL, # placeholder
     LOH = FALSE, # placeholder
+    purity_min=0.2, # placeholder
     dual_model=TRUE, # placeholder
     ploidy=2, # placeholder
     pval=0.05, # placeholder
@@ -75,6 +76,7 @@ runPICTographPlus <- function(
            inits=inits,
            threshes=threshes,
            LOH=LOH,
+           purity_min=purity_min,
            driverFile=driverFile,
            cytobandFile = cytobandFile,
            alt_reads_thresh = alt_reads_thresh, # placeholder
