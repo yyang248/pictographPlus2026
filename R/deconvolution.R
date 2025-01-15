@@ -308,16 +308,20 @@ GSEA_diff <- function(expr_matrix, sample1, sample2, gene_list, GSEA_dir, n_perm
   gsea_top <- gsea_top %>% filter(padj < 0.05)
   # gsea_top <- gsea_results %>% filter(padj < 0.05)
   
+  sample1N = sample1
+  if (sample1N == "0") {
+    sample1N = "R"
+  }
   horizontal_top_plot <- ggplot(gsea_top, aes(x = Log10padj, y = reorder(pathway, NES), fill = NES)) +
     geom_bar(stat = "identity") +
     geom_vline(xintercept = -log10(0.05), color = "green", linetype = "dashed", size = 1) +
     scale_fill_gradientn(colors = c("blue", "red"), name = "NES", oob = scales::squish, limits = c(-2, 2)) +
-    labs(x = "-log10(p-adj)", y = "Pathway", title = paste("Top Differential Pathways between Clone ", sample2, " and Clone ", sample1)) +
-    theme(axis.text.y = element_text(size = 16), 
-          axis.text.x = element_text(size = 14),
-          axis.title.x = element_text(size = 18),           # X-axis title size
-          axis.title.y = element_text(size = 18),           # Y-axis title size
-          plot.title = element_text(size = 20) # Title size and style
+    labs(x = "-log10(p-adj)", y = "Pathway", title = paste("Clone ", sample2, " vs Clone ", sample1N)) +
+    theme(axis.text.y = element_text(size = 24), 
+          axis.text.x = element_text(size = 18),
+          axis.title.x = element_text(size = 20),           # X-axis title size
+          axis.title.y = element_text(size = 20),           # Y-axis title size
+          plot.title = element_text(size = 26) # Title size and style
     )
   
   # Save the horizontal barplot for top pathways to a file
