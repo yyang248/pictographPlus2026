@@ -1,4 +1,4 @@
-#' pictograph2
+#' pictographPlus
 #' 
 #' infer tumor evolution using SNV and CNA
 #' 
@@ -18,6 +18,11 @@
 #' @import stringr
 #' @import UpSetR
 #' @import cluster
-#' @name pictograph2-package
-#' @aliases pictograph2
+#' @import ggrepel
+#' @import DESeq2
+#' @import pheatmap
+#' @import fgsea
+#' @import diptest
+#' @name pictographPlus-package
+#' @aliases pictographPlus
 NULL

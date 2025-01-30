@@ -2,10 +2,15 @@
 % Please edit documentation in R/preprocessing.R
 \name{importMutationFileOnly}
 \alias{importMutationFileOnly}
-\title{import mutation file}
+\title{import only mutation file}
 \usage{
-importMutationFileOnly(mutation_file, alt_reads_thresh = 0, vaf_thresh = 0)
+importMutationFileOnly(
+  mutation_file,
+  alt_reads_thresh = 0,
+  vaf_thresh = 0,
+  purity_min = 0.2
+)
 }
 \description{
-import mutation file
+import only mutation file
 }

@@ -2,30 +2,54 @@
 % Please edit documentation in R/preprocessing.R
 \name{importFiles}
 \alias{importFiles}
-\title{read input data file and store in PICTOGRAPH input format}
+\title{data processing for mutation and copy number files}
 \usage{
 importFiles(
   mutation_file,
   copy_number_file = NULL,
   SNV_file = NULL,
   outputDir = NULL,
-  stat_file = NULL,
+  LOH = FALSE,
+  purity_min = 0.2,
   alt_reads_thresh = 0,
   vaf_thresh = 0,
-  cnv_max_dist = 2000,
-  cnv_max_percent = 0.3,
-  tcn_normal_range = c(1.8, 2.2),
-  smooth_cnv = F,
+  cnv_min_length = 1e+06,
+  tcn_normal_range = c(1.75, 2.3),
+  filter_cnv = T,
+  smooth_cnv = T,
   autosome = T,
-  mc.cores = 8,
   pval = 0.05
 )
 }
 \arguments{
-\item{mutation_file}{mutation data file that contains columns "sample", "mutation", "chrom", "start", "end", total_reads", and "alt_reads";}
+\item{mutation_file}{a csv file that include information for SSMs. See vignette for details.}
 
-\item{copy_number_file}{copy number file that contains columns "sample", "chrom", "start", "end", "tcn"}
+\item{copy_number_file}{a csv file that include information for CNA. See vignette for details.}
+
+\item{SNV_file}{a csv file that include information for germline heterozygous SNVs. See vignette for details.}
+
+\item{outputDir}{output directory for saving all files.}
+
+\item{LOH}{whether or not to include copy number segments that are copy neutral but LOH}
+
+\item{purity_min}{minimum purity for tumor samples}
+
+\item{alt_reads_thresh}{minimum number of alternative read count for a SSM to be included in the analysis}
+
+\item{vaf_thresh}{minimum VAF for a SSM to be included in the analysis}
+
+\item{cnv_min_length}{minimum length of copy number alterations for it to be included in analysis}
+
+\item{tcn_normal_range}{range of total copy number considered as copy-neutral}
+
+\item{filter_cnv}{whether or not to filter copy number alterations}
+
+\item{smooth_cnv}{whether or not to process copy number alterations across samples to unify the segment start and end positions}
+
+\item{autosome}{to only include autosomes}
+
+\item{pval}{placeholder}
 }
 \description{
-read input data file and store in PICTOGRAPH input format
+read input data file and store in required format
 }

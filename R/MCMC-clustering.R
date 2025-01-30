@@ -6,6 +6,7 @@ runMCMCForAllBoxes <- function(sep_list,
                                ploidy=2,
                                max_K = 5,
                                min_mutation_per_cluster = 5,
+                               min_cluster_thresh=0.05,
                                cluster_diff_thresh=0.05,
                                n.iter = 5000,
                                n.burn = 1000, 
@@ -36,6 +37,7 @@ runMCMCForAllBoxes <- function(sep_list,
                                      model_type = model_type,
                                      params = params,
                                      min_mutation_per_cluster = min_mutation_per_cluster, 
+                                     min_cluster_thresh=min_cluster_thresh, 
                                      cluster_diff_thresh = cluster_diff_thresh,
                                      sample_presence=sample_presence)
     
@@ -62,6 +64,7 @@ runMCMCForAllBoxes <- function(sep_list,
                                        model_type = model_type,
                                        params = params,
                                        min_mutation_per_cluster = min_mutation_per_cluster, 
+                                       min_cluster_thresh=min_cluster_thresh, 
                                        cluster_diff_thresh = cluster_diff_thresh,
                                        sample_presence=sample_presence)
       
@@ -82,7 +85,8 @@ runMutSetMCMC <- function(temp_box,
                           temp_max_K = 5,
                           model_type = "type2",
                           params = c("z", "mcf", "icn", "m", "ystar"),
-                          min_mutation_per_cluster = 1,
+                          min_mutation_per_cluster = 5,
+                          min_cluster_thresh=0.05, 
                           cluster_diff_thresh=0.05,
                           sample_presence=FALSE) {
 
@@ -111,7 +115,7 @@ runMutSetMCMC <- function(temp_box,
   # 1) number of mutations per cluster is at least min_mutation_per_cluster 
   # 2) difference between any two cluster less than cluster_diff_thresh 
   filtered_samps_list <- filterK(samps_list, min_mutation_per_cluster = min_mutation_per_cluster,
-                                 cluster_diff_thresh = cluster_diff_thresh)
+                                 min_cluster_thresh=min_cluster_thresh, cluster_diff_thresh = cluster_diff_thresh)
   
   # Calculate BIC and silhouette
   K_tested <- seq_len(length(filtered_samps_list))
@@ -167,7 +171,7 @@ runMCMCForABox <- function(box,
   # select columns if the presence pattern is 1
   box_input_data <- getBoxInputData(box, ploidy, model_type)
   
-  extdir <- system.file("extdata", package="pictograph2")
+  extdir <- system.file("extdata", package="pictographPlus")
   
   # choose sample in which mutations are present
   sample_to_sort <- which(colSums(box_input_data$y) > 0)[1]
@@ -349,7 +353,7 @@ reverseDrop <- function(samps, pattern, n.iter) {
 }
 
 
-filterK <- function(samps_list, min_mutation_per_cluster=1, cluster_diff_thresh=0.05) {
+filterK <- function(samps_list, min_mutation_per_cluster=1, min_cluster_thresh=0.05, cluster_diff_thresh=0.05) {
   filtered_samps_list <- list()
   toBreak = F
   for (i in seq_len(length(samps_list))) {
@@ -370,7 +374,7 @@ filterK <- function(samps_list, min_mutation_per_cluster=1, cluster_diff_thresh=
       mcfTable = writeClusterMCFsTable(mcf_chain)
       # check whether mcf for any cluster is less than cluster_diff_thresh in all samples
       for (j1 in seq_len(k)) {
-        if (all(mcfTable[j1,2:ncol(mcfTable)] < 0.01)) {
+        if (all(mcfTable[j1,2:ncol(mcfTable)] < min_cluster_thresh)) {
           toBreak = T
         }
       }
