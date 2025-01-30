@@ -1,7 +1,6 @@
 
 # **PICTographPlus**
 
-The original publication XXXXXXXXXXXXX
 
 ## **Overview**
 
