@@ -54,7 +54,7 @@ vignette("pictographPlus", package = "pictographPlus")
 
 ---
 
-## Input data for genomic data for tumor evolution reconstruction
+## Input data (DNA) for tumor evolution reconstruction
 
 PICTographPlus takes input data in multiple formats for flexible user inputs:
 
@@ -128,7 +128,7 @@ The second option is to provide the SSM read counts and copy number alterations 
     | sample2 | chr1 | 10 | 10000 | 3.6 | 0.4 |
 
 
-### 3) A single csv file that contains SSM and CNA information. 
+### 3) A single csv file that contains SSM and CNA information 
 
 The last option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf". Set cncf to 0 if a mutation has no copy number alteration. Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele. If "major_integer_copy_number" is not provided, it will be estimated using an internal function built in the package. Another optional column is "purity" column that provides the information of normal contamination of a sample. 
 
@@ -244,7 +244,7 @@ where the treeFile, proportionFile, and purityFile are outputs of ```runPictogra
 
 **GSEA analysis using fgsea** can be run using:
 ```
-X_optimal <- read.csv(paste0(outputDir, "/clonal_expression.csv), row.names=1, check.names=FALSE)
+X_optimal <- read.csv(paste0(outputDir, "/clonal_expression.csv"), row.names=1, check.names=FALSE)
 runGSEA(X_optimal, outputDir, treeFile, GSEA_file)
 ```
 where GSEA_file is a text file of pathways of interest that can be obtained from resources such as [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/index.jsp).
