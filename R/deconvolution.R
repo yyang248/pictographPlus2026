@@ -1,6 +1,7 @@
 #' bulk RNA deconvolution using tumor evolution information
 #' 
 #' @export
+#' @import igraph
 runDeconvolution <- function(rna_file,
                              treeFile,
                              proportionFile,
@@ -41,8 +42,8 @@ runDeconvolution <- function(rna_file,
   } else {
     G <- graph_from_edgelist(edge_list, directed = FALSE)
     laplacian_mat <- laplacian_matrix(G)
-    laplacian_mat[1,] <- 0
-    laplacian_mat[,1] <- 0
+    # laplacian_mat[1,] <- 0
+    # laplacian_mat[,1] <- 0
     L <- as.matrix(laplacian_mat)
   }
   

@@ -14,7 +14,7 @@ runPICTographPlus(
   GSEA = TRUE,
   GSEA_file = NULL,
   top_K = 5,
-  normalization = FALSE,
+  purityFile = NULL,
   n_permutations = 1000,
   sample_presence = TRUE,
   score = "silhouette",
@@ -62,6 +62,8 @@ runPICTographPlus(
 \item{GSEA_file}{geneset file in MSigDB .gmt format; the geneset name will show up in plotting}
 
 \item{top_K}{top_K significant pathways to be plotted as GSEA results; default: 5}
+
+\item{purityFile}{purity file for each sample; default: NULL}
 
 \item{n_permutations}{number of permutations in fgsea; default: 10000}
 
