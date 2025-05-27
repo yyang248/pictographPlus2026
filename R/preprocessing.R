@@ -242,18 +242,18 @@ importCopyNumberFile <- function(copy_number_file, outputDir, SNV_file=NULL,
     
     baf <- add_missing_column(name_order, baf, 0.5)
     
-    tcn_tot <- matrix(1000, nrow(output_data), ncol(output_data))
+    tcn_tot <- matrix(500, nrow(output_data), ncol(output_data))
     rownames(tcn_tot) <- rownames(output_data)
     colnames(tcn_tot) <- colnames(output_data)
     
-    tcn_tot <- add_missing_column(name_order, tcn_tot, 1000)
+    tcn_tot <- add_missing_column(name_order, tcn_tot, 500)
     
     tcn_alt <- matrix(round(tcn_tot * baf), nrow(output_data),ncol(output_data))
     tcn_alt <- pmax(tcn_alt, tcn_tot - tcn_alt)
     rownames(tcn_alt) <- rownames(output_data)
     colnames(tcn_alt) <- colnames(output_data)
     
-    # tcn_alt <- add_missing_column(name_order, tcn_alt, 1000)
+    # tcn_alt <- add_missing_column(name_order, tcn_alt, 500)
     
   } else if (!is.null(SNV_file)) {
     tcn_ref <- list()
