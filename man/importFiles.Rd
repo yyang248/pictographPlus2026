@@ -18,7 +18,8 @@ importFiles(
   filter_cnv = T,
   smooth_cnv = T,
   autosome = T,
-  pval = 0.05
+  pval = 0.05,
+  depth = NULL
 )
 }
 \arguments{

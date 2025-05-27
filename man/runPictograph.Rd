@@ -27,6 +27,7 @@ runPictograph(
   alt_reads_thresh = 0,
   vaf_thresh = 0,
   cnv_min_length = 1e+06,
+  depth = 300,
   tcn_normal_range = c(1.75, 2.3),
   filter_cnv = T,
   smooth_cnv = T,
@@ -81,6 +82,8 @@ runPictograph(
 \item{vaf_thresh}{minimum VAF for a SSM to be included in the analysis; default: 0}
 
 \item{cnv_min_length}{minimum length of copy number alterations for it to be included in analysis}
+
+\item{depth}{total_read counts to fill in if missing from the input}
 
 \item{tcn_normal_range}{range of total copy number considered as copy-neutral; default: c(1.75,2.3)}
 

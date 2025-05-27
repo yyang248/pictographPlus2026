@@ -8,7 +8,8 @@ importMutationFile(
   mutation_file,
   alt_reads_thresh = 0,
   vaf_thresh = 0,
-  purity_min = 0.2
+  purity_min = 0.2,
+  depth = 300
 )
 }
 \description{
