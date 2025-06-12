@@ -144,7 +144,7 @@ NOTE: using this option will generate trees with SSMs only, CNA will not be assi
 
 ## Input data for bulk RNA expression
 
-The RNA file should be a csv file of columns Gene, followed by the tumor samples (tumor sample name should match that of the genomic input), and lastly the read counts of a matched normal sample. The read counts should be normalized to transcript per million (TPM).
+The RNA file should be a csv file of columns Gene, followed by the tumor samples (tumor sample name should match that of the genomic input), and lastly the read counts of a matched normal sample. The read counts should be raw counts.
 
 | Gene | sample1 | sample2 | sampleN 
 | ---- | ---- | ---- | ---- |
