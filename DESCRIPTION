@@ -24,5 +24,7 @@ Imports:
   diptest (>= 0.77-1),
   pheatmap (>= 1.0.12),
   DESeq2 (>= 1.46.0),
-  purrr (>= 1.0.2)
+  purrr (>= 1.0.2),
+  GenomicRanges (>= 1.58.0),
+  IRanges (>= 2.40.1)
 RoxygenNote: 7.3.2
