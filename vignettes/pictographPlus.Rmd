@@ -108,7 +108,7 @@ head(read.csv(system.file('extdata/examples/example2_snv_with_purity.csv',
 ```
 ## 2.2 Input data for bulk RNA expression
 
-The RNA file should be a csv file of columns Gene, followed by the tumor samples (tumor sample name should match that of the genomic input), and lastly the read counts of a matched normal sample. The read counts should be normalized to transcript per million (TPM).
+The RNA file should be a csv file of columns Gene, followed by the tumor samples (tumor sample name should match that of the genomic input), and lastly the read counts of a matched normal sample. The read counts should be raw counts.
 
 ```{r}
 head(read.csv(system.file('extdata/examples/rna_example.csv', 
