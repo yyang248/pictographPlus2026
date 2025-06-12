@@ -10,7 +10,7 @@ runDeconvolution(
   proportionFile,
   outputDir,
   purityFile = NULL,
-  lambda = 0.2
+  lambda = 0.01
 )
 }
 \description{
