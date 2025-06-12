@@ -10,7 +10,7 @@ runGSEA(
   treeFile,
   GSEA_file = NULL,
   top_K = 5,
-  n_permutations = 1000
+  n_permutations = 10000
 )
 }
 \description{
