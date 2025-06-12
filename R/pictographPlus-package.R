@@ -22,6 +22,8 @@
 #' @import DESeq2
 #' @import pheatmap
 #' @import purrr
+#' @import GenomicRanges
+#' @import IRanges
 #' @import fgsea
 #' @import diptest
 #' @name pictographPlus-package
