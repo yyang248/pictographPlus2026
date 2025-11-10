@@ -177,7 +177,9 @@ runPictograph <- function(mutation_file,
         if (score == "silhouette") {
           best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
         } else {
-          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+          #best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+          best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
+          
         }
         
         chains <- mergeSetChains(best_set_chains, input_data)
@@ -306,18 +308,46 @@ runPictograph <- function(mutation_file,
     if (score=="silhouette") {
       best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
     } else {
-      best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+      best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
+      #best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
     }
   } else {
     if (score=="silhouette") {
       best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
     } else {
-      best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
+      best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
+      #best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
     }
   }
   
+  # estiamte posterior proabilities based on BIC value and plot 
+  posterior_results <- computePosteriorTable(all_set_results)
+  posterior_plot <- ggplot(posterior_results, aes(x = factor(K), y = PosteriorProbability)) +
+    geom_line(group = 1, color = "#1f77b4", size = 1) +
+    geom_point(color = "#1f77b4", size = 3) +
+    geom_text(aes(label = sprintf("%.2f", PosteriorProbability)),
+              vjust = -0.8, size = 3.5) +
+    scale_y_continuous(limits = c(0, 1)) +
+    labs(
+      title = "Posterior probabilities of K",
+      x = "Number of clusters (K)",
+      y = "Posterior probability"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      panel.grid.minor = element_blank()
+    )
+  write.table(posterior_results, file=paste(outputDir, "k_posterior_prob.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  
+  png(paste(outputDir, "posterior_probabilities.png", sep="/"),
+      width = 800, height = 600)
+  print(posterior_plot)
+  dev.off()
+  
   chains <- mergeSetChains(best_set_chains, input_data)
   chains <- assign("chains", chains, envir = .GlobalEnv)
+  
   
   # plot MCMC tracing 
   png(paste(outputDir, "mcf.png", sep="/"))
@@ -776,3 +806,37 @@ allThreshes <- function() {
   threshes[[14]] <- c(0.8,1)
   threshes
 }
+#' Compute posterior probabilities of each K for all mutation sets
+computePosteriorTable <- function(all_set_results) {
+  posterior_table_list <- list()
+  
+  for (set_name in names(all_set_results)) {
+    res <- all_set_results[[set_name]]
+    
+    # skip if no BIC info (some sets might have only 1 variant)
+    if (is.logical(res$BIC)) next
+    
+    K_values <- res$BIC$K_tested
+    BIC_values <- res$BIC$BIC
+    
+    # numerical stability: subtract min BIC
+    exp_vals <- exp(-0.5 * (BIC_values))
+    #exp_vals <- exp(-0.5 * (BIC_values - min(BIC_values)))
+    posterior_probs <- exp_vals / sum(exp_vals)
+    
+    posterior_table_list[[set_name]] <- data.frame(
+      set_name_bin = set_name,
+      K = K_values,
+      BIC = BIC_values,
+      PosteriorProbability = posterior_probs
+    )
+  }
+  
+  posterior_table <- dplyr::bind_rows(posterior_table_list)
+  posterior_table <- posterior_table %>%
+    dplyr::arrange(set_name_bin, dplyr::desc(PosteriorProbability)) %>% 
+    select(-set_name_bin)
+  
+  return(posterior_table)
+}
+

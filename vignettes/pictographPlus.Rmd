@@ -28,23 +28,27 @@ PICTographPlus is a computational tool that integrates bulk DNA and RNA sequenci
 
 The tool infers tumor clonal evolution from single or multi-region sequencing data by modeling the uncertainty of mutation cellular fraction (MCF) in small somatic mutations (SSMs) and copy number alterations (CNAs). Using a Bayesian hierarchical model, it assigns SSMs and CNAs to subclones, reconstructing tumor evolutionary trees that adhere to principles of lineage precedence, sum condition, and optional constraints based on sample presence. For deconvolution, PICTographPlus integrates tumor clonal tree structures with clone proportions across samples to resolve bulk gene expression data. It optimizes an objective function that minimizes discrepancies between observed and predicted sample-level gene expression while imposing a smoothness penalty, ensuring that closely related clones display greater gene expression similarity. Lastly, the tool conducts pathway enrichment analysis to identify statistically significant alterations in pathways connecting tumor clones.
 
+> **Note:** PICTographPlus may not work well on treated samples. 
+
 ------
 
 # 2. Input data file format
 
-## 2.1 Input data (DNA) for tumor evolution reconstruction
+## 2.1 Input DNA data for tumor evolution reconstruction
 
 PICTographPlus takes input data in multiple formats for flexible user inputs:
 
-1) Three CSV files, one each for SSMs, CNAs, and germline heterozygous SNVs (section 2.1.1).
-2) Two csv files, one for SSM and one for CNA (section 2.1.2).
-3) A single csv file that contains SSM and CNA information (section 2.1.3).
+1) Three csv files, one each for SSMs, CNAs, and germline heterozygous single nucleotide variant (SNVs) (see example in section 2.1.1).
+2) Two csv files, one for SSM and one for CNA (see example in section 2.1.2).
+3) A single csv file that contains SSM and CNA information (see example in section 2.1.3).
 
 ### 2.1.1 Three CSV files, one each for SSMs, CNAs, and germline heterozygous SNVs.
 
-When to use: if you are using a copy number caller that only outputs log2 ratio or total copy number without BAF information. e.g. cnvkit.
+When to use: if you are using a copy number caller that only outputs $log2$ ratio or total copy number without $BAF$ information. e.g. cnvkit.
 
-The SSM file should contain at least sample, mutation, total_reads, alt_reads, chrom, start, and end columns, with the purity column being optional. 
+The SSM file should contain at least sample, mutation, total_reads, alt_reads, chrom, start, and end columns, with the purity column being optional. (maybe more clear: what if i know purity for some sample but NA for the rest? Can any value be NA or 0?)
+
+> **Note:** The default mutation naming follows the HGVS format.
 
 ```{r}
 head(read.csv(system.file('extdata/examples/example4_snv_with_purity.csv', 
@@ -56,7 +60,9 @@ The CNA file should contain sample, chrom, start, end, and tcn columns. The tota
 head(read.csv(system.file('extdata/examples/example4_cna.csv', 
                           package = 'pictographPlus')))
 ```
-The SNV file contains the count of the heterozygous germline SNVs that has the information about the "chrom", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. Note: the sample name (sample1, sample2, ... etc.) should matched the sample name used in the SSM and CNA file. 
+The SNV file contains the count of the heterozygous germline SNVs that has the information about the "chrom", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. 
+
+> **Note:** The sample name (`sample1`, `sample2`, ... etc.) should matched the sample name used in the SSM and CNA file. 
 
 ```{r}
 head(read.csv(system.file('extdata/examples/example4_SNP.csv', 
@@ -88,7 +94,7 @@ This script creates a folder `outputDir/pileup`, which contains a `germline_het.
 
 ### 2.1.2 Two csv files, one for SSM and one for CNA
 
-When to use: if you are using a copy number caller that also includes BAF information. e.g. facets.
+When to use: if you are using a copy number caller that also includes $BAF$ information. e.g. facets.
 
 The SSM file should contain columns "sample", "mutation", "total_reads", "alt_reads", "chrom", "start", and "end". The "purity" column with be optional. 
 
@@ -110,12 +116,19 @@ head(read.csv(system.file('extdata/examples/example3_cna.csv',
 
 The last option is to provide a single csv file that contains at least columns named "sample", "mutation", "total_reads", "alt_reads", "tumor_integer_copy_number", and "cncf". Set cncf to 0 if a mutation has no copy number alteration. Users can also provide an optional column "major_integer_copy_number" that provides the information of the integer copy number of the major allele. If "major_integer_copy_number" is not provided, it will be estimated using an internal function built in the package. Another optional column is "purity" column that provides the information of normal contamination of a sample. 
 
-NOTE: using this option will generate trees with SSMs only, CNA will not be assigned to clusters but only used for VAF correction.
+> **Note:** using this option will generate trees with SSMs only, CNA will not be assigned to clusters but only used for VAF correction.
 
 ```{r}
 head(read.csv(system.file('extdata/examples/example2_snv_with_purity.csv', 
                           package = 'pictographPlus')))
 ```
+
+### 2.1.3 Common formatting issues that may lead to errors
+
+- **Duplicated mutation names** within the same sample will cause errors.  
+- **Sample names** are limited to 12 characters to ensure optimal visualization in the output figures. In addition, all sample names must be consistent across all input files.
+- **Sample name consistency:** All sample names in the CNA files must match those in the SSM files. Any extra samples present in the CNA files but missing from the SSM files will result in an error.
+
 ## 2.2 Input data for bulk RNA expression
 
 The RNA file should be a csv file of columns Gene, followed by the tumor samples (tumor sample name should match that of the genomic input), and lastly the read counts of a matched normal sample (optional). The read counts should be raw counts.
