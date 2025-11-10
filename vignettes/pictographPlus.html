@@ -49,7 +49,7 @@ overflow: visible;
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -364,30 +364,41 @@ ensuring that closely related clones display greater gene expression
 similarity. Lastly, the tool conducts pathway enrichment analysis to
 identify statistically significant alterations in pathways connecting
 tumor clones.</p>
+<blockquote>
+<p><strong>Note:</strong> PICTographPlus may not work well on treated
+samples.</p>
+</blockquote>
 <hr />
 </div>
 <div id="input-data-file-format" class="section level1">
 <h1>2. Input data file format</h1>
-<div id="input-data-dna-for-tumor-evolution-reconstruction" class="section level2">
-<h2>2.1 Input data (DNA) for tumor evolution reconstruction</h2>
+<div id="input-dna-data-for-tumor-evolution-reconstruction" class="section level2">
+<h2>2.1 Input DNA data for tumor evolution reconstruction</h2>
 <p>PICTographPlus takes input data in multiple formats for flexible user
 inputs:</p>
 <ol style="list-style-type: decimal">
-<li>Three CSV files, one each for SSMs, CNAs, and germline heterozygous
-SNVs (section 2.1.1).</li>
-<li>Two csv files, one for SSM and one for CNA (section 2.1.2).</li>
-<li>A single csv file that contains SSM and CNA information (section
-2.1.3).</li>
+<li>Three csv files, one each for SSMs, CNAs, and germline heterozygous
+single nucleotide variant (SNVs) (see example in section 2.1.1).</li>
+<li>Two csv files, one for SSM and one for CNA (see example in section
+2.1.2).</li>
+<li>A single csv file that contains SSM and CNA information (see example
+in section 2.1.3).</li>
 </ol>
 <div id="three-csv-files-one-each-for-ssms-cnas-and-germline-heterozygous-snvs." class="section level3">
 <h3>2.1.1 Three CSV files, one each for SSMs, CNAs, and germline
 heterozygous SNVs.</h3>
 <p>When to use: if you are using a copy number caller that only outputs
-log2 ratio or total copy number without BAF information.
+<span class="math inline">\(log2\)</span> ratio or total copy number
+without <span class="math inline">\(BAF\)</span> information.
 e.g. cnvkit.</p>
 <p>The SSM file should contain at least sample, mutation, total_reads,
 alt_reads, chrom, start, and end columns, with the purity column being
-optional.</p>
+optional. (maybe more clear: what if i know purity for some sample but
+NA for the rest? Can any value be NA or 0?)</p>
+<blockquote>
+<p><strong>Note:</strong> The default mutation naming follows the HGVS
+format.</p>
+</blockquote>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">read.csv</span>(<span class="fu">system.file</span>(<span class="st">&#39;extdata/examples/example4_snv_with_purity.csv&#39;</span>, </span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>                          <span class="at">package =</span> <span class="st">&#39;pictographPlus&#39;</span>)))</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt;    sample         mutation total_reads alt_reads chrom start  end purity</span></span>
@@ -414,8 +425,12 @@ R}\)</span>.</p>
 that has the information about the “chrom”, the “position” of the
 germline heterozygous SNV, “ref” and “alt” allele, and the reference and
 altenative reads counts in germline (normal) sample as well as all other
-samples. Note: the sample name (sample1, sample2, … etc.) should matched
-the sample name used in the SSM and CNA file.</p>
+samples.</p>
+<blockquote>
+<p><strong>Note:</strong> The sample name (<code>sample1</code>,
+<code>sample2</code>, … etc.) should matched the sample name used in the
+SSM and CNA file.</p>
+</blockquote>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">read.csv</span>(<span class="fu">system.file</span>(<span class="st">&#39;extdata/examples/example4_SNP.csv&#39;</span>, </span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>                          <span class="at">package =</span> <span class="st">&#39;pictographPlus&#39;</span>)))</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt;   chroms position ref alt germline_ref germline_alt sample1_ref sample1_alt</span></span>
@@ -506,7 +521,7 @@ names in your SSM and CNA files.</p>
 <div id="two-csv-files-one-for-ssm-and-one-for-cna" class="section level3">
 <h3>2.1.2 Two csv files, one for SSM and one for CNA</h3>
 <p>When to use: if you are using a copy number caller that also includes
-BAF information. e.g. facets.</p>
+<span class="math inline">\(BAF\)</span> information. e.g. facets.</p>
 <p>The SSM file should contain columns “sample”, “mutation”,
 “total_reads”, “alt_reads”, “chrom”, “start”, and “end”. The “purity”
 column with be optional.</p>
@@ -545,8 +560,11 @@ copy number of the major allele. If “major_integer_copy_number” is not
 provided, it will be estimated using an internal function built in the
 package. Another optional column is “purity” column that provides the
 information of normal contamination of a sample.</p>
-<p>NOTE: using this option will generate trees with SSMs only, CNA will
-not be assigned to clusters but only used for VAF correction.</p>
+<blockquote>
+<p><strong>Note:</strong> using this option will generate trees with
+SSMs only, CNA will not be assigned to clusters but only used for VAF
+correction.</p>
+</blockquote>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">read.csv</span>(<span class="fu">system.file</span>(<span class="st">&#39;extdata/examples/example2_snv_with_purity.csv&#39;</span>, </span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                          <span class="at">package =</span> <span class="st">&#39;pictographPlus&#39;</span>)))</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;    sample         mutation total_reads alt_reads tumor_integer_copy_number</span></span>
@@ -563,6 +581,21 @@ not be assigned to clusters but only used for VAF correction.</p>
 <span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 4                         1  0.0    0.8</span></span>
 <span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 5                         1  0.0    0.8</span></span>
 <span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 6                         1  0.0    0.8</span></span></code></pre></div>
+</div>
+<div id="common-formatting-issues-that-may-lead-to-errors" class="section level3">
+<h3>2.1.3 Common formatting issues that may lead to errors</h3>
+<ul>
+<li><strong>Duplicated mutation names</strong> within the same sample
+will cause errors.<br />
+</li>
+<li><strong>Sample names</strong> are limited to 12 characters to ensure
+optimal visualization in the output figures. In addition, all sample
+names must be consistent across all input files.</li>
+<li><strong>Sample name consistency:</strong> All sample names in the
+CNA files must match those in the SSM files. Any extra samples present
+in the CNA files but missing from the SSM files will result in an
+error.</li>
+</ul>
 </div>
 </div>
 <div id="input-data-for-bulk-rna-expression" class="section level2">

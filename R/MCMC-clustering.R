@@ -119,6 +119,7 @@ runMutSetMCMC <- function(temp_box,
   
   # Calculate BIC and silhouette
   K_tested <- seq_len(length(filtered_samps_list))
+  #print(K_tested)
   if (temp_max_K > 1) {
     box_indata <- getBoxInputData(temp_box, ploidy, model_type)
     

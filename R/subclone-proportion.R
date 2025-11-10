@@ -58,7 +58,8 @@ plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_nam
     theme(legend.position = "bottom") +
     theme(legend.text = element_text(size=legend_size), legend.title = element_text(size=legend_size)) + 
     facet_wrap(~Sample) +
-    theme(strip.text.x = element_text(size=title_size))
+    theme(strip.text.x = element_text(size=10))
+    #theme(strip.text.x = element_text(size=title_size))
   
 }
 
