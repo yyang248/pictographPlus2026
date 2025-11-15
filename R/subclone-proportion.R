@@ -38,7 +38,7 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' @param subclone_props matrix of subclone proportions (returned from \code{calcSubcloneProportions})
 #' @param sample_names (Optional) Vector of sample names. Should be in the order of columns of subclone_props
 #' @export
-plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_names = NULL, title_size=18, legend_size=14) {
+plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_names = NULL, title_size=18, legend_size=14,order=NULL) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
   props_tb <- subclone_props %>%
     magrittr::set_colnames(sample_names) %>%
@@ -48,10 +48,11 @@ plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_nam
     pivot_longer(cols = sample_names,
                  names_to = "Sample",
                  values_to = "Proportion")
-  
   clone_colors <- palette(nrow(subclone_props))
-  props_tb$Sample <- factor(props_tb$Sample,
-                            levels = sample_names)
+  if(!is.null(order)){
+    props_tb$Sample <- factor(props_tb$Sample,
+                              levels = order)
+  }
   ggplot(props_tb, aes(x="", y=Proportion, fill = Subclone)) +
     geom_bar(stat="identity", width=1, color="black") +
     coord_polar("y", start=0) +
