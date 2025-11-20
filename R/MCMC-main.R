@@ -352,12 +352,12 @@ runPictograph <- function(mutation_file,
   chains <- mergeSetChains(best_set_chains, input_data)
   chains <- assign("chains", chains, envir = .GlobalEnv)
   
-  # plot MCMC tracing 
-  png(paste(outputDir, "mcf.png", sep="/"))
-  print(
-    plotChainsMCF(chains$mcf_chain)
-  )
-  dev.off()
+  # # plot MCMC tracing 
+  # png(paste(outputDir, "mcf.png", sep="/"))
+  # print(
+  #   plotChainsMCF(chains$mcf_chain)
+  # )
+  # dev.off()
   
   # write mcf table
   mcfTable = writeClusterMCFsTable(chains$mcf_chain)
@@ -497,8 +497,8 @@ runPictograph <- function(mutation_file,
     }
   }
   
-  # plot all possible trees
-  plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile)
+  # # plot all possible trees
+  # plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile)
   
   # highest scoring tree
   best_tree <- all_spanning_trees[[which(scores == max(scores))[length(which(scores == max(scores)))]]]
@@ -518,16 +518,26 @@ runPictograph <- function(mutation_file,
   best_tree = rename_tree_nodes(best_tree, new_cluster_names)
   write.table(best_tree, file=paste(outputDir, "tree.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   # change filteredDriverList
-  filteredDriverList$Cluster <- new_cluster_names[as.character(filteredDriverList$Cluster)]
-  write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  if(!is.null(filteredDriverList)){
+    filteredDriverList$Cluster <- new_cluster_names[as.character(filteredDriverList$Cluster)]
+    filteredDriverList <- filteredDriverList %>%
+      arrange(Cluster)
+    write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  }
   # change mcfTable
   mcfTable$Cluster <- new_cluster_names[as.character(mcfTable$Cluster)]
+  mcfTable <- mcfTable %>%
+    arrange(Cluster)
   write.table(mcfTable, file=paste(outputDir, "mcf.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   # change final_df
   final_df$Cluster <- new_cluster_names[as.character(final_df$Cluster)]
+  final_df <- final_df %>%
+    arrange(Cluster)
   write.table(final_df, file=paste(outputDir, "mutationClusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   # change clusterassignmentTable
   clusterassignmentTable$Cluster <- new_cluster_names[as.character(clusterassignmentTable$Cluster)]
+  clusterassignmentTable <- clusterassignmentTable %>%
+    arrange(Cluster)
   write.table(clusterassignmentTable, file=paste(outputDir, "clusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   # change subclone_props
   rownames(subclone_props)=new_cluster_names[rownames(subclone_props)]
@@ -551,6 +561,16 @@ runPictograph <- function(mutation_file,
     plotTree(best_tree, filteredDriverList, palette = viridis::viridis)
     dev.off()
   }
+
+  # plot MCMC tracing 
+  png(paste(outputDir, "mcf.png", sep="/"))
+  print(
+    plotChainsMCF(chains$mcf_chain,new_cluster_names)
+  )
+  dev.off()
+  
+  # plot all possible trees
+  plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile, new_cluster_names)
   
   # # estimate purity
   # cc <- best_tree %>% filter(parent=="root") %>% select(child)
@@ -823,11 +843,17 @@ getLabels <- function(ClusterAssignmentTable, driverList, cytobandFile) {
   return(filtered_table)
 }
 #' Plot all trees with the highest scores
-plotAllTrees <- function(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile) {
+plotAllTrees <- function(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile, new_cluster_names) {
   # plot all tree with best scores
   
   outputDir = paste(outputDir, "all_trees", sep = "/")
   suppressWarnings(dir.create(outputDir))
+  new_cluster_names <- c(new_cluster_names, root = "root")
+  all_spanning_trees <- lapply(all_spanning_trees, function(df) {
+    df$parent <- new_cluster_names[as.character(df$parent)]
+    df$child  <- new_cluster_names[as.character(df$child)]
+    df
+  })
   
   for (i in seq_len(length(which(scores == max(scores))))) {
     idx = which(scores == max(scores))[i]
