@@ -206,12 +206,13 @@ The parameters are for function ```bash runPICTographPlus``` and the indicated m
 | mc.cores | number of cores used for parallel computing; not applicable to Windows | 8 | runPictograph |
 | inits | additional parameters for JAGS | list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123) | runPictograph |
 | LOH | whether to include copy-neutral LOH event in CNA | FALSE | runPictograph |
-| driverFile | list of driver genes used for visualization | NULL | runPictograph |
+| selectedMutFile | list of genes or mutations used for visualization | NULL | runPictograph |
 | cnv_min_length | minimum length of CNA for it to be included in the analysis | 1000000 | runPictograph |
 | tcn_normal_range | range of total copy number considered as copy-neutral | c(1.75,2.3) | runPictograph |
 | filter_cnv | whether or not to filter CNAs | TRUE | runPictograph |
 | smooth_cnv | whether or not to process copy number alterations across samples to unify the segment start and end postions | TRUE | runPictograph |
 | autosome | to only include autosome | TRUE | runPictograph |
+| sampleorderFile | a csv file that defines the order of samples in the piechart | NULL | runPictograph |
 | rna_file | bulk RNA file in integer read counts; rows are samples and columns are genes | Required | runDeconvolution |
 | treeFile | tumor clone tree file | NULL | runDeconvolution runGSEA|
 | proportionFile | subclone proportion file | NULL | runDeconvolution |
@@ -221,6 +222,7 @@ The parameters are for function ```bash runPICTographPlus``` and the indicated m
 | GSEA_file | geneset file in MSigDB .gmt format | NULL | runGSEA |
 | top_K | top_K significant pathways to be plotted as GSEA results | 5 | runGSEA |
 | n_permutations | number of permutations in fgsea | 10000 | runGSEA |
+
 ------
 
 # 5. Output files
@@ -267,14 +269,21 @@ A CSV file of tumor purity used by `runDeconvolution()`.
 |--------:|--------:|
 |    0.70 |    0.50 |
 
-## 6.4 **driverFile**
-A CSV file that contains driver mutation information used for plotting by `runPictograph()`.  
-If you use this file, ensure that the corresponding mutation file follows the format **gene_extraInformation**, where **gene** is the actual gene name. The `gene_type` column can be **oncogene** or **tumor_suppressor** (leave blank if unknown).
+## 6.4 **SelectedMutFile**
+A CSV file that contains mutation information or gene region information used for plotting by `runPictograph()`.  
+If you use this file to plot any mutations in certain gene region information on the tree, ensure that the corresponding mutation file follows the format **gene_extraInformation**, where **gene** is the actual gene name. The `gene_type` column can be **oncogene** or **tumor_suppressor** (leave blank if unknown).
 
 | gene  | chrom  |    start |     end  | gene_type        |
 |:------|:-------|---------:|---------:|:-----------------|
 | KRAS  | chr12  |  25205246 |  25250936 | oncogene         |
 | SMAD4 | chr18  |  51028528 |  51085045 | tumor_suppressor |
+
+If you use this file to plot any specific mutations on the tree, ensure that all specified mutation names match mutation column in SSM file. 
+
+| mutation        | 
+|:----------------|
+| chr1-57-clone1  | 
+| chr1-110-clone1 |
 
 ## 6.5 **cytobandFile**
 A TSV file of cytoband information used for plotting by `runPictograph()`.
@@ -283,3 +292,11 @@ A TSV file of cytoband information used for plotting by `runPictograph()`.
 |:-----|------:|--------:|:-------|:-------|
 | chr1 |     0 |  2300000 | p36.33 | gneg   |
 | chr1 | 2300000 |  5300000 | p36.32 | gpos25 |
+
+## 6.5 **sampleorderFile**
+A csv file that defines the order of samples in the piechart, plotting by `runPictograph()`.
+
+| order  | sample_name | 
+|:-----|------:|
+| 1 | sample1 |  
+| 2 | sample2 |  

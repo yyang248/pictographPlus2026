@@ -25,6 +25,7 @@
 #' @param LOH whether or not to include copy number segments that are copy neutral but LOH; default: FALSE
 #' @param purity_min minimum purity for tumor samples; default: 0.2
 #' @param driverFile list of driver genes used for visualization. See vignette for details.
+#' @param selectedMutFile list of genes or mutations used for visualization. See vignette for details.
 #' @param cytobandFile list of cytoband regions used for visualization. See vignette for details.
 #' @param alt_reads_thresh minimum number of alternative read count for a SSM to be included in the analysis; default: 0
 #' @param vaf_thresh minimum VAF for a SSM to be included in the analysis; default: 0
@@ -34,6 +35,7 @@
 #' @param autosome to only include autosomes; default: TRUE
 #' @param cnv_min_length minimum length of copy number alterations for it to be included in analysis
 #' @param depth total_read counts to fill in if missing from the input
+#' @param sampleorderFile a csv file that orders samples in the piechart output
 #' @export
 runPictograph <- function(mutation_file,
                      copy_number_file=NULL,
@@ -52,7 +54,8 @@ runPictograph <- function(mutation_file,
                      inits=list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123),
                      LOH = FALSE,
                      purity_min=0.2,
-                     driverFile = NULL,
+                     #driverFile = NULL,
+                     selectedMutFile = NULL,
                      cytobandFile = NULL,
                      alt_reads_thresh = 0, 
                      vaf_thresh = 0, 
@@ -65,7 +68,8 @@ runPictograph <- function(mutation_file,
                      dual_model=TRUE,
                      ploidy=2,
                      pval=0.05,
-                     threshes=NULL
+                     threshes=NULL,
+                     sampleorderFile=NULL
                      ) {
   
   data <- importFiles(mutation_file=mutation_file, 
@@ -319,7 +323,7 @@ runPictograph <- function(mutation_file,
       #best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
     }
   }
-  
+
   # estiamte posterior proabilities based on BIC value and plot 
   posterior_results <- computePosteriorTable(all_set_results)
   posterior_plot <- ggplot(posterior_results, aes(x = factor(K), y = PosteriorProbability)) +
@@ -348,18 +352,17 @@ runPictograph <- function(mutation_file,
   chains <- mergeSetChains(best_set_chains, input_data)
   chains <- assign("chains", chains, envir = .GlobalEnv)
   
-  
-  # plot MCMC tracing 
-  png(paste(outputDir, "mcf.png", sep="/"))
-  print(
-    plotChainsMCF(chains$mcf_chain)
-  )
-  dev.off()
+  # # plot MCMC tracing 
+  # png(paste(outputDir, "mcf.png", sep="/"))
+  # print(
+  #   plotChainsMCF(chains$mcf_chain)
+  # )
+  # dev.off()
   
   # write mcf table
   mcfTable = writeClusterMCFsTable(chains$mcf_chain)
   colnames(mcfTable)=c("Cluster",c(colnames(data$y)))
-  write.table(mcfTable, file=paste(outputDir, "mcf.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  #write.table(mcfTable, file=paste(outputDir, "mcf.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   
   # write cluster assignment table
   clusterassignmentTable = writeClusterAssignmentsTable(chains$z_chain, Mut_ID = input_data$MutID)
@@ -394,7 +397,7 @@ runPictograph <- function(mutation_file,
   }
   clusterassignmentTable$idx <- toKeepIndex
   clusterassignmentTable <- clusterassignmentTable %>% filter(toKeepIndex==1) %>% select(-idx)
-  write.table(clusterassignmentTable, file=paste(outputDir, "clusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  #write.table(clusterassignmentTable, file=paste(outputDir, "clusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   
   ###### generate combined cluster assignment output ###########################
   y <- as.data.frame(data$y) %>% rename_with(~ paste0(., "_variant_count"))
@@ -449,7 +452,7 @@ runPictograph <- function(mutation_file,
   final_df <- combined %>%
     left_join(clusterassignmentTable, by = c("Mut_ID" = "Mut_ID_processed"))
   
-  write.table(final_df, file=paste(outputDir, "mutationClusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  #write.table(final_df, file=paste(outputDir, "mutationClusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
   
   #################################################################################
   
@@ -474,20 +477,83 @@ runPictograph <- function(mutation_file,
   scores <- assign("scores", scores, envir = .GlobalEnv)
   
   ##### find dirver mutations
+  # driverList = NULL
+  # filteredDriverList = NULL
+  # if (!is.null(driverFile)) {
+  #   driverList <- read.csv(driverFile)
+  #   filteredDriverList <- getDrivers(clusterassignmentTable, driverList, cytobandFile)
+  #   write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # }
   driverList = NULL
   filteredDriverList = NULL
-  if (!is.null(driverFile)) {
-    driverList <- read.csv(driverFile)
-    filteredDriverList <- getDrivers(clusterassignmentTable, driverList, cytobandFile)
-    write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  if (!is.null(selectedMutFile)) {
+    driverList <- read.csv(selectedMutFile)
+    if(ncol(driverList)>1){
+      filteredDriverList <- getDrivers(clusterassignmentTable, driverList, cytobandFile)
+      #write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+    }else{
+      filteredDriverList <- getLabels(clusterassignmentTable, driverList, cytobandFile)
+      #write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+    }
   }
   
-  # plot all possible trees
-  plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList)
+  # # plot all possible trees
+  # plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile)
   
   # highest scoring tree
   best_tree <- all_spanning_trees[[which(scores == max(scores))[length(which(scores == max(scores)))]]]
+  # estimate purity
+  cc <- best_tree %>% filter(parent=="root") %>% select(child)
+  purity <- mcfTable %>% filter(Cluster %in% cc$child) %>% summarise(across(everything(), sum)) %>% select(-Cluster)
+  colnames(purity) <- colnames(data$y)
+  write.table(purity, file=paste(outputDir, "purity.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # estimate subclone proportion
+  subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
+  rownames(subclone_props) = mcfTable$Cluster
+  colnames(subclone_props) = colnames(data$y)
+  
+  # rename clusters 
+  new_cluster_names = rename_by_depth(best_tree)
+  # rename best_tree
+  best_tree = rename_tree_nodes(best_tree, new_cluster_names)
   write.table(best_tree, file=paste(outputDir, "tree.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # change filteredDriverList
+  if(!is.null(filteredDriverList)){
+    filteredDriverList$Cluster <- new_cluster_names[as.character(filteredDriverList$Cluster)]
+    filteredDriverList <- filteredDriverList %>%
+      arrange(Cluster)
+    write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  }
+  # change mcfTable
+  mcfTable$Cluster <- new_cluster_names[as.character(mcfTable$Cluster)]
+  mcfTable <- mcfTable %>%
+    arrange(Cluster)
+  write.table(mcfTable, file=paste(outputDir, "mcf.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # change final_df
+  final_df$Cluster <- new_cluster_names[as.character(final_df$Cluster)]
+  final_df <- final_df %>%
+    arrange(Cluster)
+  write.table(final_df, file=paste(outputDir, "mutationClusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # change clusterassignmentTable
+  clusterassignmentTable$Cluster <- new_cluster_names[as.character(clusterassignmentTable$Cluster)]
+  clusterassignmentTable <- clusterassignmentTable %>%
+    arrange(Cluster)
+  write.table(clusterassignmentTable, file=paste(outputDir, "clusterAssign.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # change subclone_props
+  rownames(subclone_props)=new_cluster_names[rownames(subclone_props)]
+  subclone_props <- subclone_props[order(as.numeric(rownames(subclone_props))), ]
+  write.csv(subclone_props, file=paste(outputDir, "subclone_proportion.csv", sep="/"), quote = FALSE)
+  if(is.null(sampleorderFile)){
+    png(paste(outputDir, "subclone_props.png", sep="/"))
+    print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y)))
+    dev.off()
+  }else{
+    order_df <- read.csv(sampleorderFile)
+    ordered_sample_names <- order_df$sample_name[order(order_df$order)]
+    png(paste(outputDir, "subclone_props.png", sep="/"))
+    print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y),order=ordered_sample_names))
+    dev.off()
+  }
   
   # plot best and ensemble tree
   if (nrow(best_tree) >= 1) {
@@ -495,24 +561,44 @@ runPictograph <- function(mutation_file,
     plotTree(best_tree, filteredDriverList, palette = viridis::viridis)
     dev.off()
   }
-  
-  # estimate purity
-  cc <- best_tree %>% filter(parent=="root") %>% select(child)
-  purity <- mcfTable %>% filter(Cluster %in% cc$child) %>% summarise(across(everything(), sum)) %>% select(-Cluster)
-  # purity[purity>1] <- 1 # test
-  colnames(purity) <- colnames(data$y)
-  write.table(purity, file=paste(outputDir, "purity.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
-  
-  # estimate subclone proportion
-  subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
-  rownames(subclone_props) = mcfTable$Cluster
-  colnames(subclone_props) = colnames(data$y)
 
-  write.csv(subclone_props, file=paste(outputDir, "subclone_proportion.csv", sep="/"), quote = FALSE)
-
-  png(paste(outputDir, "subclone_props.png", sep="/"))
-  print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y)))
+  # plot MCMC tracing 
+  png(paste(outputDir, "mcf.png", sep="/"))
+  print(
+    plotChainsMCF(chains$mcf_chain,new_cluster_names)
+  )
   dev.off()
+  
+  # plot all possible trees
+  plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile, new_cluster_names)
+  
+  # # estimate purity
+  # cc <- best_tree %>% filter(parent=="root") %>% select(child)
+  # purity <- mcfTable %>% filter(Cluster %in% cc$child) %>% summarise(across(everything(), sum)) %>% select(-Cluster)
+  # # purity[purity>1] <- 1 # test
+  # colnames(purity) <- colnames(data$y)
+  # write.table(purity, file=paste(outputDir, "purity.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  
+  # # estimate subclone proportion
+  # subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
+  # #rownames(subclone_props) = mcfTable$Cluster
+  # rownames(subclone_props) = c(1:length(mcfTable$Cluster))
+  # colnames(subclone_props) = colnames(data$y)
+  # 
+  # write.csv(subclone_props, file=paste(outputDir, "subclone_proportion.csv", sep="/"), quote = FALSE)
+  # 
+  # if(is.null(sampleorderFile)){
+  #   png(paste(outputDir, "subclone_props.png", sep="/"))
+  #   print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y)))
+  #   dev.off()
+  # }else{
+  #   order_df <- read.csv(sampleorderFile)
+  #   ordered_sample_names <- order_df$sample_name[order(order_df$order)]
+  #   png(paste(outputDir, "subclone_props.png", sep="/"))
+  #   print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y),order=ordered_sample_names))
+  #   dev.off()
+  # }
+
 
   # save all data
   save.image(file=paste(outputDir, "PICTographPlus.RData", sep="/"))
@@ -677,13 +763,97 @@ getDrivers <- function(ClusterAssignmentTable, driverList, cytobandFile) {
   
   return(filtered_table)
 }
-
+getLabels <- function(ClusterAssignmentTable, driverList, cytobandFile) {
+  
+  # Ensure column name consistency
+  colnames(driverList)[1] <- "mutation"
+  
+  # Filter cluster assignment table for matching driver mutations
+  filtered_table <- ClusterAssignmentTable %>%
+    filter(Mut_ID %in% driverList$mutation) %>%
+    mutate(
+      # Identify if this mutation is a CNV segment
+      is_chr = str_starts(Mut_ID, "chr"),
+      chrom_start_end = ifelse(is_chr, str_extract(Mut_ID, "chr[0-9XY]+-[0-9]+-[0-9]+"), NA)
+    ) %>%
+    select(Mut_ID, Cluster, chrom_start_end)
+  
+  # If nothing matched, return NULL
+  if (nrow(filtered_table) == 0) {
+    return(NULL)
+  }
+  
+  # Add cytoband info if provided
+  if (!is.null(cytobandFile)) {
+    allowed_chromosomes <- c(paste0("chr", 1:22), "chrX", "chrY")
+    cytobandTable <- read.delim(cytobandFile, header = FALSE, stringsAsFactors = FALSE)
+    cytobandTable <- cytobandTable[cytobandTable[[1]] %in% allowed_chromosomes, ]
+    colnames(cytobandTable) <- c("chrom", "start", "end", "cytoband", "ext")
+    cytobandTable <- unique(cytobandTable)
+    
+    filtered_table <- filtered_table %>%
+      mutate(
+        chromosome = sub("-.*", "", chrom_start_end),
+        starts = as.numeric(sub("-.*", "", sub(".*?-", "", chrom_start_end))),
+        ends = as.numeric(sub(".*-", "", chrom_start_end))
+      ) %>%
+      rowwise() %>%
+      mutate(
+        cytoband = if (!is.na(chromosome)) {
+          match_start <- which(cytobandTable$chrom == chromosome &
+                                 cytobandTable$start <= starts &
+                                 cytobandTable$end > starts)
+          cytoband_start <- if (length(match_start) > 0) cytobandTable$cytoband[match_start[1]] else NA
+          
+          match_end <- which(cytobandTable$chrom == chromosome &
+                               cytobandTable$start <= ends &
+                               cytobandTable$end > ends)
+          cytoband_end <- if (length(match_end) > 0) cytobandTable$cytoband[match_end[1]] else NA
+          
+          if (!is.na(cytoband_start) && cytoband_start == cytoband_end) {
+            cytoband_start
+          } else {
+            paste(na.omit(c(cytoband_start, cytoband_end)), collapse = "-")
+          }
+        } else {
+          NA
+        },
+        Mut_ID = if (!is.na(cytoband)) {
+          paste(chromosome, cytoband, Mut_ID, sep = "_")
+        } else {
+          Mut_ID
+        }
+      ) %>%
+      ungroup() %>%
+      select(Mut_ID, Cluster, chrom_start_end)
+    
+  } else {
+    filtered_table <- filtered_table %>%
+      rowwise() %>%
+      mutate(
+        Mut_ID = if (!is.na(chrom_start_end)) {
+          paste(chrom_start_end, Mut_ID, sep = "_")
+        } else {
+          Mut_ID
+        }
+      ) %>%
+      ungroup()
+  }
+  
+  return(filtered_table)
+}
 #' Plot all trees with the highest scores
-plotAllTrees <- function(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList) {
+plotAllTrees <- function(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile, new_cluster_names) {
   # plot all tree with best scores
   
   outputDir = paste(outputDir, "all_trees", sep = "/")
   suppressWarnings(dir.create(outputDir))
+  new_cluster_names <- c(new_cluster_names, root = "root")
+  all_spanning_trees <- lapply(all_spanning_trees, function(df) {
+    df$parent <- new_cluster_names[as.character(df$parent)]
+    df$child  <- new_cluster_names[as.character(df$child)]
+    df
+  })
   
   for (i in seq_len(length(which(scores == max(scores))))) {
     idx = which(scores == max(scores))[i]
@@ -707,10 +877,19 @@ plotAllTrees <- function(outputDir, scores, all_spanning_trees, mcfTable, data, 
       colnames(subclone_props) = colnames(data$y)
   
       write.csv(subclone_props, file=paste(outputDir, "/tree_", i, "_subclone_proportion.csv", sep=""), quote = FALSE)
-  
-      png(paste(outputDir, "/tree_", i, "_subclone_proportion.png", sep=""))
-      print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y)))
-      dev.off()
+      
+      if(is.null(sampleorderFile)){
+        png(paste(outputDir, "/tree_", i, "_subclone_proportion.png", sep=""))
+        print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y)))
+        dev.off()
+      }else{
+        order_df <- read.csv(sampleorderFile)
+        ordered_sample_names <- order_df$sample_name[order(order_df$order)]
+        png(paste(outputDir, "/tree_", i, "_subclone_proportion.png", sep=""))
+        print(plotSubclonePie(subclone_props, sample_names=ordered_sample_names))
+        dev.off()
+      }
+
     }
   }
 }
@@ -839,4 +1018,32 @@ computePosteriorTable <- function(all_set_results) {
   
   return(posterior_table)
 }
+
+#' Rename clusters by the order in the tree
+rename_by_depth <- function(tree_df, root = "root") {
+  adj <- split(tree_df$child, tree_df$parent)
+  dfs_order <- c()
+  dfs <- function(node) {
+    if (!is.null(adj[[node]])) {
+      for (child in adj[[node]]) {
+        dfs_order <<- c(dfs_order, child)
+        dfs(child)
+      }
+    }
+  }
+  dfs(root)
+  #new_names <- setNames(LETTERS[seq_along(dfs_order)], dfs_order)
+  new_names <- setNames(seq_along(dfs_order), dfs_order)
+  return(new_names)
+}
+#' generate new best_tree with new cluster names 
+rename_tree_nodes <- function(tree_df, new_names) {
+  tree_df$parent <- ifelse(tree_df$parent %in% names(new_names),
+                           new_names[tree_df$parent], tree_df$parent)
+  tree_df$child  <- ifelse(tree_df$child %in% names(new_names),
+                           new_names[tree_df$child],  tree_df$child)
+  return(tree_df)
+}
+
+
 

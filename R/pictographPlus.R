@@ -25,6 +25,7 @@
 #' @param LOH whether or not to include copy number segments that are copy neutral but LOH; default: FALSE
 #' @param purity_min minimum purity for tumor samples; default: 0.2
 #' @param driverFile list of driver genes used for visualization. See vignette for details.
+#' @param selectedMutFile list of genes or mutations used for visualization. See vignette for details.
 #' @param cytobandFile list of cytoband regions used for visualization. See vignette for details.
 #' @param alt_reads_thresh minimum number of alternative read count for a SSM to be included in the analysis; default: 0
 #' @param vaf_thresh minimum VAF for a SSM to be included in the analysis; default: 0
@@ -40,6 +41,7 @@
 #' @param n_permutations number of permutations in fgsea; default: 10000
 #' @param purityFile purity file for each sample; default: NULL
 #' @param normalize normalize the raw count using DESeq2; default: TRUE
+#' @param sampleorderFile a csv file that orders samples in the piechart output
 runPICTographPlus <- function(
     mutation_file,
     rna_file,
@@ -64,7 +66,8 @@ runPICTographPlus <- function(
     thin=10, 
     mc.cores=8, 
     inits=list(".RNG.name" = "base::Wichmann-Hill",".RNG.seed" = 123),
-    driverFile = NULL,
+    #driverFile = NULL,
+    selectedMutFile = NULL,
     cytobandFile = NULL,
     LOH = FALSE,
     purity_min=0.2, 
@@ -78,7 +81,8 @@ runPICTographPlus <- function(
     threshes = NULL,
     dual_model = TRUE, 
     pval = 0.05, 
-    ploidy = 2
+    ploidy = 2,
+    sampleorderFile=NULL
 ) {
   
   runPictograph(mutation_file,
@@ -102,7 +106,8 @@ runPICTographPlus <- function(
            threshes=threshes,
            LOH=LOH,
            purity_min=purity_min,
-           driverFile=driverFile,
+           #driverFile=driverFile,
+           selectedMutFile=selectedMutFile,
            cytobandFile = cytobandFile,
            alt_reads_thresh = alt_reads_thresh,
            vaf_thresh = vaf_thresh,
@@ -110,7 +115,8 @@ runPICTographPlus <- function(
            tcn_normal_range=tcn_normal_range,
            filter_cnv=filter_cnv,
            smooth_cnv=smooth_cnv, 
-           autosome=autosome
+           autosome=autosome,
+           sampleorderFile=sampleorderFile
   )
   
   treeFile = paste(outputDir, "tree.csv", sep="/")
