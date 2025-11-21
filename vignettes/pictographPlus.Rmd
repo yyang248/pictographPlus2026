@@ -26,17 +26,15 @@ PICTographPlus is a computational tool that integrates bulk DNA and RNA sequenci
 2) Infer Tumor Evolution
 3) Identify Transcriptional Transitions Between Clones
 
-The tool infers tumor clonal evolution from single or multi-region sequencing data by modeling the uncertainty of mutation cellular fraction (MCF) in small somatic mutations (SSMs) and copy number alterations (CNAs). Using a Bayesian hierarchical model, it assigns SSMs and CNAs to subclones, reconstructing tumor evolutionary trees that adhere to principles of lineage precedence, sum condition, and optional constraints based on sample presence. For deconvolution, PICTographPlus integrates tumor clonal tree structures with clone proportions across samples to resolve bulk gene expression data. It optimizes an objective function that minimizes discrepancies between observed and predicted sample-level gene expression while imposing a smoothness penalty, ensuring that closely related clones display greater gene expression similarity. Lastly, the tool conducts pathway enrichment analysis to identify statistically significant alterations in pathways connecting tumor clones.
-
-> **Note:** PICTographPlus may not work well on treated samples. 
-
+The tool infers tumor clonal evolution from multi-region sequencing data from a single time point by modeling the uncertainty of mutation cellular fraction (MCF) in small somatic mutations (SSMs) and copy number alterations (CNAs). Using a Bayesian hierarchical model, it assigns SSMs and CNAs to subclones, reconstructing tumor evolutionary trees that adhere to principles of lineage precedence and sum condition. For high purity tumor samples sequenced at high coverage, optional constraints based on sample presence may be beneficial. For deconvolution, PICTographPlus integrates tumor clonal tree structures with clone proportions across samples to resolve bulk gene expression data. It optimizes an objective function that minimizes discrepancies between observed and predicted sample-level gene expression while imposing a smoothness penalty, ensuring that closely related clones display greater gene expression similarity. Lastly, the tool conducts pathway enrichment analysis to identify statistically significant alterations in pathways connecting tumor clones. PictographPlus was designed for modeling natural disease history of untreated samples, but has yielded useful results on some treated cases (Rineheart et al Nat. Prec. Onc. 2024). 
+ 
 ------
 
 # 2. Input data file format
 
 ## 2.1 Input DNA data for tumor evolution reconstruction
 
-PICTographPlus takes input data in multiple formats for flexible user inputs:
+PICTographPlus takes input data in multiple formats for flexible user inputs. You can input either:
 
 1) Three csv files, one each for SSMs, CNAs, and germline heterozygous single nucleotide variant (SNVs) (see example in section 2.1.1).
 2) Two csv files, one for SSM and one for CNA (see example in section 2.1.2).
@@ -46,21 +44,20 @@ PICTographPlus takes input data in multiple formats for flexible user inputs:
 
 When to use: if you are using a copy number caller that only outputs $log2$ ratio or total copy number without $BAF$ information. e.g. cnvkit.
 
-The SSM file should contain at least sample, mutation, total_reads, alt_reads, chrom, start, and end columns, with the purity column being optional. (maybe more clear: what if i know purity for some sample but NA for the rest? Can any value be NA or 0?)
+The SSM file should contain at least sample, mutation, total_reads, alt_reads, chrom, start, and end columns. Tumor purity values can be entered but are not required. If no purity values are entered, PictographPlus will estimate purity.
 
-> **Note:** The default mutation naming follows the HGVS format.
 
 ```{r}
 head(read.csv(system.file('extdata/examples/example4_snv_with_purity.csv', 
                           package = 'pictographPlus')))
 ```
-The CNA file should contain sample, chrom, start, end, and tcn columns. The total copy number (tcn) can be inferred from many copy number callers. In case a copy number caller outputs the $log2$ ratio of a segment, the tcn can be calculate using $tcn = 2 * 2^{\log_2 R}$. 
+The CNA file should contain sample, chrom, start, end, and tcn columns. The total copy number (tcn) can be inferred from many copy number callers. We have had success with **CNVKit** (Talevic et al. PLOS Comp Bio 2016) and **FACETS** (Shen et al. Nuc. Acids Rec 2016). However, any copy number calling that provides TCN should work. In case a copy number caller outputs the $log2$ ratio of a segment, the tcn can be calculated using $tcn = 2 * 2^{\log_2 R}$. 
 
 ```{r}
 head(read.csv(system.file('extdata/examples/example4_cna.csv', 
                           package = 'pictographPlus')))
 ```
-The SNV file contains the count of the heterozygous germline SNVs that has the information about the "chrom", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. 
+The SNV file contains the count of the heterozygous germline SNVs that have the information about the "chrom", the "position" of the germline heterozygous SNV, "ref" and "alt" allele, and the reference and altenative reads counts in germline (normal) sample as well as all other samples. 
 
 > **Note:** The sample name (`sample1`, `sample2`, ... etc.) should matched the sample name used in the SSM and CNA file. 
 
@@ -94,7 +91,7 @@ This script creates a folder `outputDir/pileup`, which contains a `germline_het.
 
 ### 2.1.2 Two csv files, one for SSM and one for CNA
 
-When to use: if you are using a copy number caller that also includes $BAF$ information. e.g. facets.
+When to use: if you are using a copy number caller that also includes $BAF$ information. e.g. **FACETS**.
 
 The SSM file should contain columns "sample", "mutation", "total_reads", "alt_reads", "chrom", "start", and "end". The "purity" column with be optional. 
 
@@ -270,28 +267,14 @@ A CSV file of tumor purity used by `runDeconvolution()`.
 |    0.70 |    0.50 |
 
 ## 6.4 **SelectedMutFile**
-A CSV file that contains mutation information or gene region information used for plotting by `runPictograph()`.  
-If you use this file to plot any mutations in certain gene region information on the tree, ensure that the corresponding mutation file follows the format **gene_extraInformation**, where **gene** is the actual gene name. The `gene_type` column can be **oncogene** or **tumor_suppressor** (leave blank if unknown).
+You can annotate the edges of the tree plot generated by PictographPlus by pre-selecting the mutations or copy-number-altered gene regions that are inferred to occur on those edges. To pre-select, use the **runPictograph** parameter **selectedMutFile** to input a plain text file that lists the mutations or copy number alterations of interest. We suggest you choose a naming convention that will be easy to read and interpret on your tree.
 
-| gene  | chrom  |    start |     end  | gene_type        |
-|:------|:-------|---------:|---------:|:-----------------|
-| KRAS  | chr12  |  25205246 |  25250936 | oncogene         |
-| SMAD4 | chr18  |  51028528 |  51085045 | tumor_suppressor |
+| TP53 R153H  | 
+| KRAS G12D   |
 
-If you use this file to plot any specific mutations on the tree, ensure that all specified mutation names match mutation column in SSM file. 
+| 
 
-| mutation        | 
-|:----------------|
-| chr1-57-clone1  | 
-| chr1-110-clone1 |
 
-## 6.5 **cytobandFile**
-A TSV file of cytoband information used for plotting by `runPictograph()`.
-
-| chr  | start | end     | band   | stain  |
-|:-----|------:|--------:|:-------|:-------|
-| chr1 |     0 |  2300000 | p36.33 | gneg   |
-| chr1 | 2300000 |  5300000 | p36.32 | gpos25 |
 
 ## 6.5 **sampleorderFile**
 A csv file that defines the order of samples in the piechart, plotting by `runPictograph()`.
