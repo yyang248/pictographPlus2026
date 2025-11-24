@@ -172,35 +172,6 @@ resegmentation <- function(data, cnv_min_length=2000) {
 #' @import GenomicRanges IRanges dplyr tidyr
 reSegCNV <- function(data, cnv_min_length) {
   
-  # data_merged <- data %>%
-  #   # 1) sort
-  #   arrange(sample, chrom, start) %>%
-  #   
-  #   # 2) flag mergeable to previous
-  #   group_by(sample, chrom) %>%
-  #   mutate(
-  #     tcn_diff = abs(tcn - lag(tcn)),
-  #     baf_diff = abs(baf - lag(baf)),
-  #     mergeable = (tcn_diff <= 0.2 & baf_diff <= 0.1) %>% replace_na(FALSE),
-  #     
-  #     # 3) assign a new group whenever NOT mergeable
-  #     grp = cumsum(!mergeable),
-  #     
-  #     # compute segment length for weighting
-  #     seg_length = end - start
-  #   ) %>%
-  #   
-  #   # 4) collapse each run‐group
-  #   group_by(sample, chrom, grp) %>%
-  #   summarise(
-  #     start = min(start),
-  #     end   = max(end),
-  #     tcn   = weighted.mean(tcn, w = seg_length),
-  #     baf   = weighted.mean(baf, w = seg_length),
-  #     .groups = "drop"
-  #   ) %>%
-  #   arrange(sample, chrom, start)
-  
   grl <- split(data, data$sample) |> 
     lapply(function(df) {
       GRanges(

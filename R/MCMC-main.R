@@ -242,12 +242,6 @@ runPictograph <- function(mutation_file,
         # pick K
         set_k_choices <- writeSetKTable(all_set_results)
         
-        # collect best chains
-        # if (score == "silhouette") {
-        #   best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
-        # } else {
-        #   best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
-        # }
         best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
         
         chains <- mergeSetChains(best_set_chains, input_data)
@@ -281,7 +275,6 @@ runPictograph <- function(mutation_file,
        }
       
     } else {
-      warning("Mode: SSM and CNA; using sample presence; single model NEED TO BE TESTED")
       ##############################################################################
       #             MCMC chain for all; no sample presence                         #
       ##############################################################################
@@ -313,14 +306,12 @@ runPictograph <- function(mutation_file,
       best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
     } else {
       best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
-      #best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
     }
   } else {
     if (score=="silhouette") {
       best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$silhouette_K)
     } else {
       best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$min_BIC)
-      #best_set_chains <- collectBestKChains(all_set_results, chosen_K = set_k_choices$BIC_K)
     }
   }
 
@@ -476,14 +467,6 @@ runPictograph <- function(mutation_file,
   # scores <- calculateTreeScoreMutations(chains$mcf_chain, data, icnTable, cncfTable, multiplicityTable, clusterassignmentTable, data$purity, all_spanning_trees)
   scores <- assign("scores", scores, envir = .GlobalEnv)
   
-  ##### find dirver mutations
-  # driverList = NULL
-  # filteredDriverList = NULL
-  # if (!is.null(driverFile)) {
-  #   driverList <- read.csv(driverFile)
-  #   filteredDriverList <- getDrivers(clusterassignmentTable, driverList, cytobandFile)
-  #   write.table(filteredDriverList, file=paste(outputDir, "labelling.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
-  # }
   driverList = NULL
   filteredDriverList = NULL
   if (!is.null(selectedMutFile)) {
@@ -498,8 +481,7 @@ runPictograph <- function(mutation_file,
   }
   
   # # plot all possible trees
-  # plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile)
-  
+
   # highest scoring tree
   best_tree <- all_spanning_trees[[which(scores == max(scores))[length(which(scores == max(scores)))]]]
   # estimate purity
@@ -571,34 +553,6 @@ runPictograph <- function(mutation_file,
   
   # plot all possible trees
   plotAllTrees(outputDir, scores, all_spanning_trees, mcfTable, data, filteredDriverList, sampleorderFile, new_cluster_names)
-  
-  # # estimate purity
-  # cc <- best_tree %>% filter(parent=="root") %>% select(child)
-  # purity <- mcfTable %>% filter(Cluster %in% cc$child) %>% summarise(across(everything(), sum)) %>% select(-Cluster)
-  # # purity[purity>1] <- 1 # test
-  # colnames(purity) <- colnames(data$y)
-  # write.table(purity, file=paste(outputDir, "purity.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
-  
-  # # estimate subclone proportion
-  # subclone_props <- calcSubcloneProportions(mcf_mat, best_tree)
-  # #rownames(subclone_props) = mcfTable$Cluster
-  # rownames(subclone_props) = c(1:length(mcfTable$Cluster))
-  # colnames(subclone_props) = colnames(data$y)
-  # 
-  # write.csv(subclone_props, file=paste(outputDir, "subclone_proportion.csv", sep="/"), quote = FALSE)
-  # 
-  # if(is.null(sampleorderFile)){
-  #   png(paste(outputDir, "subclone_props.png", sep="/"))
-  #   print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y)))
-  #   dev.off()
-  # }else{
-  #   order_df <- read.csv(sampleorderFile)
-  #   ordered_sample_names <- order_df$sample_name[order(order_df$order)]
-  #   png(paste(outputDir, "subclone_props.png", sep="/"))
-  #   print(plotSubclonePie(subclone_props, sample_names=colnames(input_data$y),order=ordered_sample_names))
-  #   dev.off()
-  # }
-
 
   # save all data
   save.image(file=paste(outputDir, "PICTographPlus.RData", sep="/"))

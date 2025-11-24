@@ -133,13 +133,7 @@ plotTree <- function(edges, filtered_table=NULL, palette=viridis::viridis) {
                       vertex.label.family = "Helvetica", vertex.label.color = V(ig)$label.color, 
                       edge.arrow.size = 0.4, edge.arrow.width = 1, edge.color = "grey", edge.label.color = "red",
                       margin=0.2)
-  
-  # igraph::plot.igraph(ig, layout = igraph::layout_as_tree(ig), edge.label = edge_attr(ig, "Mut_ID"),
-  #                     vertex.size=32, vertex.frame.color = "#000000", vertex.label.cex = 1.6, edge.label.cex=0.75,
-  #                     vertex.label.family = "Helvetica", vertex.label.color = V(ig)$label.color, 
-  #                     edge.arrow.size = 0.5, edge.arrow.width = 2, edge.color = "black", edge.label.color = "red",
-  #                     margin=0.2)
-  
+
 }
 
 #' generate colors for each vertice
