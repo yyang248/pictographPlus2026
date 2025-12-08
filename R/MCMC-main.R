@@ -316,29 +316,29 @@ runPictograph <- function(mutation_file,
   }
 
   # estiamte posterior proabilities based on BIC value and plot 
-  posterior_results <- computePosteriorTable(all_set_results)
-  posterior_plot <- ggplot(posterior_results, aes(x = factor(K), y = PosteriorProbability)) +
-    geom_line(group = 1, color = "#1f77b4", size = 1) +
-    geom_point(color = "#1f77b4", size = 3) +
-    geom_text(aes(label = sprintf("%.2f", PosteriorProbability)),
-              vjust = -0.8, size = 3.5) +
-    scale_y_continuous(limits = c(0, 1)) +
-    labs(
-      title = "Posterior probabilities of K",
-      x = "Number of clusters (K)",
-      y = "Posterior probability"
-    ) +
-    theme_minimal(base_size = 14) +
-    theme(
-      plot.title = element_text(hjust = 0.5, face = "bold"),
-      panel.grid.minor = element_blank()
-    )
-  write.table(posterior_results, file=paste(outputDir, "k_posterior_prob.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
-  
-  png(paste(outputDir, "posterior_probabilities.png", sep="/"),
-      width = 800, height = 600)
-  print(posterior_plot)
-  dev.off()
+  # posterior_results <- computePosteriorTable(all_set_results)
+  # posterior_plot <- ggplot(posterior_results, aes(x = factor(K), y = PosteriorProbability)) +
+  #   geom_line(group = 1, color = "#1f77b4", size = 1) +
+  #   geom_point(color = "#1f77b4", size = 3) +
+  #   geom_text(aes(label = sprintf("%.2f", PosteriorProbability)),
+  #             vjust = -0.8, size = 3.5) +
+  #   scale_y_continuous(limits = c(0, 1)) +
+  #   labs(
+  #     title = "Posterior probabilities of K",
+  #     x = "Number of clusters (K)",
+  #     y = "Posterior probability"
+  #   ) +
+  #   theme_minimal(base_size = 14) +
+  #   theme(
+  #     plot.title = element_text(hjust = 0.5, face = "bold"),
+  #     panel.grid.minor = element_blank()
+  #   )
+  # write.table(posterior_results, file=paste(outputDir, "k_posterior_prob.csv", sep="/"), quote = FALSE, sep = ",", row.names = F)
+  # 
+  # png(paste(outputDir, "posterior_probabilities.png", sep="/"),
+  #     width = 800, height = 600)
+  # print(posterior_plot)
+  # dev.off()
   
   chains <- mergeSetChains(best_set_chains, input_data)
   chains <- assign("chains", chains, envir = .GlobalEnv)

@@ -49,6 +49,8 @@ plotTree <- function(edges, filtered_table=NULL, palette=viridis::viridis) {
   
   v_color <- colorScheme(edges, palette)
   edge_list <- as.matrix(edges[, c("parent", "child")])
+  edge_list[, 1] <- trimws(edge_list[, 1])
+  edge_list[, 2] <- trimws(edge_list[, 2])
   ig <- graph_from_edgelist(edge_list, directed = TRUE)
   # E(ig)$name <- edges$edge
   ###########
