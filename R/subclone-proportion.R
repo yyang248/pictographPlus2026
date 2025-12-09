@@ -40,7 +40,18 @@ calcSubcloneProportions <- function(w_mat, tree_edges) {
 #' @export
 plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_names = NULL, title_size=18, legend_size=14,order=NULL) {
   if (is.null(sample_names)) sample_names <- paste0("Sample ", 1:ncol(subclone_props))
-  props_tb <- subclone_props %>%
+  if (is.null(dim(subclone_props))) {
+    props_tb <- subclone_props %>% as_tibble_row() %>%
+      magrittr::set_colnames(sample_names) %>%
+      as_tibble() %>%
+      mutate(Subclone = factor(paste0("Clone ", 1:nrow(.)),
+                               levels = paste0("Clone ", 1:nrow(.)))) %>%
+      pivot_longer(cols = sample_names,
+                   names_to = "Sample",
+                   values_to = "Proportion")
+    clone_colors <- palette(1)
+  }else{  
+    props_tb <- subclone_props %>% 
     magrittr::set_colnames(sample_names) %>%
     as_tibble() %>%
     mutate(Subclone = factor(paste0("Clone ", 1:nrow(.)),
@@ -48,7 +59,8 @@ plotSubclonePie <- function(subclone_props, palette=viridis::viridis, sample_nam
     pivot_longer(cols = sample_names,
                  names_to = "Sample",
                  values_to = "Proportion")
-  clone_colors <- palette(nrow(subclone_props))
+    clone_colors <- palette(nrow(subclone_props))}
+  
   if(!is.null(order)){
     props_tb$Sample <- factor(props_tb$Sample,
                               levels = order)
